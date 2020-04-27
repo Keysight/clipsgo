@@ -1,0 +1,10 @@
+(deftemplate MAIN::prospect
+   (multislot name (type SYMBOL) (default ?DERIVE))
+   (slot assets (type SYMBOL) (allowed-symbols poor rich wealthy loaded) (default rich))
+   (slot age (type INTEGER) (range 80 ?VARIABLE) (default 80)))
+
+(defrule MAIN::happy_relationship
+   (prospect (name $?name) (assets ?net_worth) (age ?months))
+   =>
+   (printout t "Prospect: " ?name crlf ?net_worth crlf ?months " months old" crlf))
+
