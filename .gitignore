@@ -1,0 +1,5 @@
+clips/*.c
+clips.zip
+clips_source/
+*.so
+*.o
