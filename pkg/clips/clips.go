@@ -3,6 +3,19 @@ package clips
 // #cgo CFLAGS: -I ../../clips_source
 // #cgo LDFLAGS: -L ../../clips_source -l clips
 // #include <clips.h>
+//
+// void goFunction(void *env, DATA_OBJECT *data);
+//
+// static inline void callGoFunction(void * env, DATA_OBJECT *data) {
+//	 goFunction(env,data);
+// }
+//
+// int define_function(void *environment)
+// {
+//     return EnvDefineFunction(
+//         environment, "go-function", 'u',
+//         PTIEF callGoFunction, "go-function");
+// }
 import "C"
 import (
 	"fmt"
@@ -10,34 +23,50 @@ import (
 	"unsafe"
 )
 
-// CLIPSError error returned from CLIPS
-type CLIPSError struct {
+const defFunction = `
+(deffunction %[1]s ($?args)
+  (go-function %[1]s (expand$ ?args)))
+`
+
+// Error error returned from CLIPS
+type Error struct {
 	Err error
 }
 
-func (e *CLIPSError) Error() string {
-	return e.Err.Error()
-}
+// Callback is the signature for functions that will be called from CLIPS
+type Callback func([]interface{}) (interface{}, error)
 
 // Environment stores a CLIPS environment
 type Environment struct {
-	env unsafe.Pointer
+	env      unsafe.Pointer
+	callback map[string]Callback
+}
+
+var environmentObj = make(map[unsafe.Pointer]*Environment)
+
+func (e *Error) Error() string {
+	return e.Err.Error()
 }
 
 // CreateEnvironment creates a new instance of a CLIPS environment
 func CreateEnvironment() *Environment {
 	ret := &Environment{
-		env: C.CreateEnvironment(),
+		env:      C.CreateEnvironment(),
+		callback: make(map[string]Callback),
 	}
 	runtime.SetFinalizer(ret, func(env *Environment) {
 		env.Close()
 	})
+	C.define_function(ret.env)
+	environmentObj[ret.env] = ret
+
 	return ret
 }
 
 // Close destroys the CLIPS environment
 func (env *Environment) Close() {
 	if env.env != nil {
+		delete(environmentObj, env.env)
 		C.DestroyEnvironment(env.env)
 		env.env = nil
 	}
@@ -52,7 +81,7 @@ func (env *Environment) Load(path string) error {
 		errint = int(C.EnvLoad(env.env, cpath))
 	}
 	if errint != 1 {
-		return &CLIPSError{
+		return &Error{
 			Err: fmt.Errorf("Unable to load file %s", path),
 		}
 	}
@@ -70,7 +99,7 @@ func (env *Environment) Save(path string, binary bool) error {
 		errint = int(C.EnvSave(env.env, cpath))
 	}
 	if errint != 1 {
-		return &CLIPSError{
+		return &Error{
 			Err: fmt.Errorf("Unable to save to file %s", path),
 		}
 	}
@@ -82,7 +111,7 @@ func (env *Environment) BatchStar(path string) error {
 	cpath := C.CString(path)
 	defer C.free(unsafe.Pointer(cpath))
 	if C.EnvBatchStar(env.env, cpath) != 1 {
-		return &CLIPSError{
+		return &Error{
 			Err: fmt.Errorf("Unable to open file %s", path),
 		}
 	}
@@ -94,7 +123,7 @@ func (env *Environment) Build(construct string) error {
 	cconstruct := C.CString(construct)
 	defer C.free(unsafe.Pointer(cconstruct))
 	if C.EnvBuild(env.env, cconstruct) != 1 {
-		return &CLIPSError{
+		return &Error{
 			Err: fmt.Errorf("Unable to parse construct %s", construct),
 		}
 	}
@@ -110,7 +139,7 @@ func (env *Environment) Eval(construct string) (interface{}, error) {
 	errint := int(C.EnvEval(env.env, cconstruct, data.byRef()))
 
 	if errint != 1 {
-		return nil, &CLIPSError{
+		return nil, &Error{
 			Err: fmt.Errorf("Unable to parse construct %s", construct),
 		}
 	}
@@ -128,7 +157,7 @@ func (env *Environment) Clear() {
 }
 
 // DefineFunction defines a Go function within the CLIPS environment
-/*
-func (env *Environment) DefineFunction(func) {
+func (env *Environment) DefineFunction(name string, callback Callback) error {
+	env.callback[name] = callback
+	return env.Build(fmt.Sprintf(defFunction, name))
 }
-*/

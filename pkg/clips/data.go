@@ -113,24 +113,6 @@ import (
 	"unsafe"
 )
 
-// TYPES maps from Go datatypes to corresponding CLIPS representation
-var TYPES = map[reflect.Kind]C.short{
-	reflect.Bool:    SYMBOL,
-	reflect.Int:     INTEGER,
-	reflect.Float32: FLOAT,
-	reflect.Float64: FLOAT,
-	reflect.String:  STRING,
-	reflect.Array:   MULTIFIELD,
-	reflect.Slice:   MULTIFIELD,
-	/*
-		clips.common.Symbol: clips.common.CLIPSType.SYMBOL,
-		clips.facts.ImpliedFact: clips.common.CLIPSType.FACT_ADDRESS,
-		clips.facts.TemplateFact: clips.common.CLIPSType.FACT_ADDRESS,
-		clips.classes.Instance: clips.common.CLIPSType.INSTANCE_ADDRESS,
-		clips.common.InstanceName: clips.common.CLIPSType.INSTANCE_NAME}
-	*/
-}
-
 // Symbol represents a CLIPS SYMBOL value
 type Symbol string
 
@@ -144,14 +126,19 @@ type DataObject struct {
 	data *C.struct_dataObject
 }
 
-func createDataObject(env *Environment) *DataObject {
-	datamem := C.malloc(C.sizeof_struct_dataObject)
-	data := C.data_object_ptr(datamem)
+func createDataObjectInitialized(env *Environment, data *C.struct_dataObject) *DataObject {
 	ret := &DataObject{
 		env:  env,
 		typ:  -1,
 		data: data,
 	}
+	return ret
+}
+
+func createDataObject(env *Environment) *DataObject {
+	datamem := C.malloc(C.sizeof_struct_dataObject)
+	data := C.data_object_ptr(datamem)
+	ret := createDataObjectInitialized(env, data)
 	runtime.SetFinalizer(ret, func(data *DataObject) {
 		data.Close()
 	})
@@ -187,10 +174,49 @@ func (do *DataObject) Value() interface{} {
 	return do.goValue(dtype, dvalue)
 }
 
+func (do *DataObject) clipsTypeFor(v interface{}) Type {
+	if v == nil {
+		return SYMBOL
+	}
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Bool:
+		return SYMBOL
+	case reflect.Int:
+		return INTEGER
+	case reflect.Int32:
+		return INTEGER
+	case reflect.Int64:
+		return INTEGER
+	case reflect.Float32:
+		return FLOAT
+	case reflect.Float64:
+		return FLOAT
+	case reflect.Array:
+		return MULTIFIELD
+	case reflect.Slice:
+		return MULTIFIELD
+	default:
+		switch reflect.TypeOf(v).String() {
+		case "clips.Symbol":
+			return SYMBOL
+		case "clips.InstanceName":
+			return INSTANCE_NAME
+		case "string":
+			return STRING
+		}
+		/*
+			clips.facts.ImpliedFact: clips.common.Type.FACT_ADDRESS,
+			clips.facts.TemplateFact: clips.common.Type.FACT_ADDRESS,
+			clips.classes.Instance: clips.common.Type.INSTANCE_ADDRESS,
+		*/
+	}
+	return SYMBOL
+}
+
 func (do *DataObject) setValue(value interface{}) {
 	var dtype C.short
 	if do.typ < 0 {
-		dtype = TYPES[reflect.TypeOf(value).Kind()]
+		dtype = C.short(do.clipsTypeFor(value))
 	} else {
 		dtype = do.typ
 	}
@@ -211,7 +237,18 @@ func (do *DataObject) goValue(dtype C.short, dvalue unsafe.Pointer) interface{} 
 	case EXTERNAL_ADDRESS:
 		return C.to_external_address(dvalue)
 	case SYMBOL:
-		return Symbol(C.GoString(C.to_string(dvalue)))
+		cstr := C.to_string(dvalue)
+		gstr := C.GoString(cstr)
+		if gstr == "nil" {
+			return nil
+		}
+		if gstr == "TRUE" {
+			return true
+		}
+		if gstr == "FALSE" {
+			return false
+		}
+		return Symbol(gstr)
 	case INSTANCE_NAME:
 		return InstanceName(C.GoString(C.to_string(dvalue)))
 	case MULTIFIELD:
@@ -243,8 +280,17 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
 	}
+	if v, ok := dvalue.(int); ok {
+		return C.EnvAddLong(do.env.env, C.longlong(v))
+	}
+	if v, ok := dvalue.(int32); ok {
+		return C.EnvAddLong(do.env.env, C.longlong(v))
+	}
 	if v, ok := dvalue.(int64); ok {
 		return C.EnvAddLong(do.env.env, C.longlong(v))
+	}
+	if v, ok := dvalue.(float32); ok {
+		return C.EnvAddDouble(do.env.env, C.double(v))
 	}
 	if v, ok := dvalue.(float64); ok {
 		return C.EnvAddDouble(do.env.env, C.double(v))
@@ -255,6 +301,16 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	}
 	if v, ok := dvalue.(string); ok {
 		vstr := C.CString(v)
+		defer C.free(unsafe.Pointer(vstr))
+		return C.EnvAddSymbol(do.env.env, vstr)
+	}
+	if v, ok := dvalue.(Symbol); ok {
+		vstr := C.CString(string(v))
+		defer C.free(unsafe.Pointer(vstr))
+		return C.EnvAddSymbol(do.env.env, vstr)
+	}
+	if v, ok := dvalue.(InstanceName); ok {
+		vstr := C.CString(string(v))
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
 	}
@@ -289,7 +345,7 @@ func (do *DataObject) listToMultifield(values []interface{}) unsafe.Pointer {
 	ret := C.EnvCreateMultifield(do.env.env, size)
 	multifield := C.multifield_ptr(ret)
 	for i, v := range values {
-		C.set_multifield_type(multifield, C.long(i+1), TYPES[reflect.TypeOf(v).Kind()])
+		C.set_multifield_type(multifield, C.long(i+1), C.short(do.clipsTypeFor(v)))
 		C.set_multifield_value(multifield, C.long(i+1), do.clipsValue(v))
 	}
 	C.set_data_begin(do.data, 1)

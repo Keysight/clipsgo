@@ -34,7 +34,7 @@ endif
 clipsgo: clips
 	$(GO) build ./pkg/...
 
-test: clipsgo
+test: clips
 	$(GO) test ./pkg/...
 
 install-clips: clips

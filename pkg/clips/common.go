@@ -2,8 +2,8 @@ package clips
 
 import "C"
 
-// CLIPSType is an enumeration CLIPS uses to describe data types
-type CLIPSType C.short
+// Type is an enumeration CLIPS uses to describe data types
+type Type C.short
 
 const (
 	FLOAT = iota
@@ -29,8 +29,8 @@ var clipstypes = [...]string{
 	"INSTANCE_NAME",
 }
 
-func (typ CLIPSType) String() string {
-	return clipstypes[typ]
+func (typ Type) String() string {
+	return clipstypes[int(typ)]
 }
 
 /*

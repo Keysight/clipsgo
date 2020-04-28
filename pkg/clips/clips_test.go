@@ -158,11 +158,21 @@ func TestCreateEnvironment(t *testing.T) {
 		env.Reset()
 	})
 
-	/*
-		t.Run("DefineFunction", func(t *testing.T) {
-			env := CreateEnvironment()
-			defer env.Close()
+	t.Run("DefineFunction", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Close()
 
-		})
-	*/
+		argcount := 0
+		callback := func(args []interface{}) (interface{}, error) {
+			argcount = len(args)
+			return nil, nil
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		_, err = env.Eval("(test-callback a b c)")
+		assert.NilError(t, err)
+		assert.Equal(t, argcount, 3)
+	})
 }
