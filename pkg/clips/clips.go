@@ -28,11 +28,6 @@ const defFunction = `
   (go-function %[1]s (expand$ ?args)))
 `
 
-// Error error returned from CLIPS
-type Error struct {
-	Err error
-}
-
 // Callback is the signature for functions that will be called from CLIPS
 type Callback func([]interface{}) (interface{}, error)
 
@@ -40,20 +35,20 @@ type Callback func([]interface{}) (interface{}, error)
 type Environment struct {
 	env      unsafe.Pointer
 	callback map[string]Callback
+	router   map[string]Router
+	errRtr   *ErrorRouter
 }
 
 var environmentObj = make(map[unsafe.Pointer]*Environment)
-
-func (e *Error) Error() string {
-	return e.Err.Error()
-}
 
 // CreateEnvironment creates a new instance of a CLIPS environment
 func CreateEnvironment() *Environment {
 	ret := &Environment{
 		env:      C.CreateEnvironment(),
 		callback: make(map[string]Callback),
+		router:   make(map[string]Router),
 	}
+	ret.errRtr = CreateErrorRouter(ret)
 	runtime.SetFinalizer(ret, func(env *Environment) {
 		env.Close()
 	})
@@ -81,9 +76,7 @@ func (env *Environment) Load(path string) error {
 		errint = int(C.EnvLoad(env.env, cpath))
 	}
 	if errint != 1 {
-		return &Error{
-			Err: fmt.Errorf("Unable to load file %s", path),
-		}
+		return EnvError(env, "Unable to load file \"%s\"", path)
 	}
 	return nil
 }
@@ -99,9 +92,7 @@ func (env *Environment) Save(path string, binary bool) error {
 		errint = int(C.EnvSave(env.env, cpath))
 	}
 	if errint != 1 {
-		return &Error{
-			Err: fmt.Errorf("Unable to save to file %s", path),
-		}
+		return EnvError(env, "Unable to save to file \"%s\"", path)
 	}
 	return nil
 }
@@ -111,9 +102,7 @@ func (env *Environment) BatchStar(path string) error {
 	cpath := C.CString(path)
 	defer C.free(unsafe.Pointer(cpath))
 	if C.EnvBatchStar(env.env, cpath) != 1 {
-		return &Error{
-			Err: fmt.Errorf("Unable to open file %s", path),
-		}
+		return EnvError(env, "Unable to open file \"%s\"", path)
 	}
 	return nil
 }
@@ -123,9 +112,7 @@ func (env *Environment) Build(construct string) error {
 	cconstruct := C.CString(construct)
 	defer C.free(unsafe.Pointer(cconstruct))
 	if C.EnvBuild(env.env, cconstruct) != 1 {
-		return &Error{
-			Err: fmt.Errorf("Unable to parse construct %s", construct),
-		}
+		return EnvError(env, "Unable to parse construct \"%s\"", construct)
 	}
 	return nil
 }
@@ -139,9 +126,7 @@ func (env *Environment) Eval(construct string) (interface{}, error) {
 	errint := int(C.EnvEval(env.env, cconstruct, data.byRef()))
 
 	if errint != 1 {
-		return nil, &Error{
-			Err: fmt.Errorf("Unable to parse construct %s", construct),
-		}
+		return nil, EnvError(env, "Unable to parse construct \"%s\"", construct)
 	}
 	return data.Value(), nil
 }
