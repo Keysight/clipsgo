@@ -24,7 +24,7 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 
 	fname := C.CString("go-function")
 	defer C.free(unsafe.Pointer(fname))
-	if C.EnvArgTypeCheck(envptr, fname, 1, SYMBOL, temp.byRef()) != 1 {
+	if C.EnvArgTypeCheck(envptr, fname, 1, SYMBOL.CVal(), temp.byRef()) != 1 {
 		data.setValue("Error: Invalid argument count")
 		return
 	}

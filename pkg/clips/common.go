@@ -3,10 +3,10 @@ package clips
 import "C"
 
 // Type is an enumeration CLIPS uses to describe data types
-type Type C.short
+type Type C.int
 
 const (
-	FLOAT = iota
+	FLOAT Type = iota
 	INTEGER
 	SYMBOL
 	STRING
@@ -17,7 +17,7 @@ const (
 	INSTANCE_NAME
 )
 
-var clipstypes = [...]string{
+var clipsTypes = [...]string{
 	"FLOAT",
 	"INTEGER",
 	"SYMBOL",
@@ -30,33 +30,37 @@ var clipstypes = [...]string{
 }
 
 func (typ Type) String() string {
-	return clipstypes[int(typ)]
+	return clipsTypes[int(typ)]
 }
 
-/*
-if sys.version_info.major == 3:
-    class Symbol(str):
-        """Python equivalent of a CLIPS SYMBOL."""
-        def __new__(cls, symbol):
-            return str.__new__(cls, sys.intern(symbol))
-elif sys.version_info.major == 2:
-    class Symbol(str):
-        """Python equivalent of a CLIPS SYMBOL."""
-        def __new__(cls, symbol):
-            # pylint: disable=E0602
-            return str.__new__(cls, intern(str(symbol)))
+// CVal returns the value as appropriate for a C call
+func (typ Type) CVal() C.int {
+	return C.int(typ)
+}
 
+// SaveMode is used to specify the type of save when saving objects to a file
+type SaveMode C.short
 
-class InstanceName(Symbol):
-    """Instance names are CLIPS SYMBOLS."""
-    pass
+const (
+	LOCAL_SAVE SaveMode = iota
+	VISIBLE_SAVE
+)
 
+var clipsSaveModes = [...]string{
+	"LOCAL_SAVE",
+	"VISIBLE_SAVE",
+}
 
-class SaveMode(IntEnum):
-    LOCAL_SAVE = 0
-    VISIBLE_SAVE = 1
+func (sm SaveMode) String() string {
+	return clipsSaveModes[int(sm)]
+}
 
+// CVal returns the value as appropriate for a C call
+func (sm SaveMode) CVal() C.int {
+	return C.int(sm)
+}
 
+/* TODO
 class ClassDefaultMode(IntEnum):
     CONVENIENCE_MODE = 0
     CONSERVATION_MODE = 1
@@ -88,9 +92,4 @@ class TemplateSlotDefaultType(IntEnum):
     NO_DEFAULT = 0
     STATIC_DEFAULT = 1
     DYNAMIC_DEFAULT = 2
-
-
-# Assign functions and routers per Environment
-ENVIRONMENT_DATA = {}
-EnvData = namedtuple('EnvData', ('user_functions', 'routers'))
 */

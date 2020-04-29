@@ -17,7 +17,7 @@ package clips
 //	 return GetpType(data);
 // }
 //
-// short set_data_type(struct dataObject *data, short type)
+// short set_data_type(struct dataObject *data, int type)
 // {
 //   return SetpType(data, type);
 // }
@@ -122,7 +122,7 @@ type InstanceName Symbol
 // DataObject wraps a CLIPS data object
 type DataObject struct {
 	env  *Environment
-	typ  C.short
+	typ  Type
 	data *C.struct_dataObject
 }
 
@@ -164,7 +164,7 @@ func (do *DataObject) byVal() {
 
 // Value returns the Go value for this data object
 func (do *DataObject) Value() interface{} {
-	dtype := C.get_data_type(do.data)
+	dtype := Type(C.get_data_type(do.data))
 	dvalue := C.get_data_value(do.data)
 
 	if dvalue == C.NULL {
@@ -204,29 +204,29 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 		case "string":
 			return STRING
 		}
-		/*
-			clips.facts.ImpliedFact: clips.common.Type.FACT_ADDRESS,
-			clips.facts.TemplateFact: clips.common.Type.FACT_ADDRESS,
-			clips.classes.Instance: clips.common.Type.INSTANCE_ADDRESS,
+		/* TODO
+		clips.facts.ImpliedFact: clips.common.Type.FACT_ADDRESS,
+		clips.facts.TemplateFact: clips.common.Type.FACT_ADDRESS,
+		clips.classes.Instance: clips.common.Type.INSTANCE_ADDRESS,
 		*/
 	}
 	return SYMBOL
 }
 
 func (do *DataObject) setValue(value interface{}) {
-	var dtype C.short
+	var dtype Type
 	if do.typ < 0 {
-		dtype = C.short(do.clipsTypeFor(value))
+		dtype = do.clipsTypeFor(value)
 	} else {
 		dtype = do.typ
 	}
 
-	C.set_data_type(do.data, dtype)
+	C.set_data_type(do.data, dtype.CVal())
 	C.set_data_value(do.data, do.clipsValue(value))
 }
 
 // goValue converts a CLIPS data value into a Go data structure
-func (do *DataObject) goValue(dtype C.short, dvalue unsafe.Pointer) interface{} {
+func (do *DataObject) goValue(dtype Type, dvalue unsafe.Pointer) interface{} {
 	switch dtype {
 	case FLOAT:
 		return float64(C.to_double(dvalue))
@@ -253,11 +253,11 @@ func (do *DataObject) goValue(dtype C.short, dvalue unsafe.Pointer) interface{} 
 		return InstanceName(C.GoString(C.to_string(dvalue)))
 	case MULTIFIELD:
 		return do.multifieldToList()
-		/*
-			case FACT_ADDRESS:
-				return clips.facts.new_fact(self._env, lib.to_pointer(dvalue))
-			case INSTANCE_ADDRESS:
-				return clips.classes.Instance(self._env, lib.to_pointer(dvalue))
+		/* TODO
+		case FACT_ADDRESS:
+			return clips.facts.new_fact(self._env, lib.to_pointer(dvalue))
+		case INSTANCE_ADDRESS:
+			return clips.classes.Instance(self._env, lib.to_pointer(dvalue))
 		*/
 	}
 	return nil
@@ -317,11 +317,11 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	if v, ok := dvalue.([]interface{}); ok {
 		return do.listToMultifield(v)
 	}
-	/*
-		if isinstance(dvalue, (clips.facts.Fact)):
-			return dvalue._fact
-		if isinstance(dvalue, (clips.classes.Instance)):
-			return dvalue._ist
+	/* TODO
+	if isinstance(dvalue, (clips.facts.Fact)):
+		return dvalue._fact
+	if isinstance(dvalue, (clips.classes.Instance)):
+		return dvalue._ist
 	*/
 	return nil
 }
@@ -333,7 +333,7 @@ func (do *DataObject) multifieldToList() []interface{} {
 
 	ret := make([]interface{}, 0, end-begin+1)
 	for i := begin; i <= end; i++ {
-		dtype := C.get_multifield_type(multifield, i)
+		dtype := Type(C.get_multifield_type(multifield, i))
 		dvalue := C.get_multifield_value(multifield, i)
 		ret = append(ret, do.goValue(dtype, dvalue))
 	}
