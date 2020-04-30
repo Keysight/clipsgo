@@ -87,9 +87,4 @@ class Verbosity(IntEnum):
     SUCCINT = 1
     TERSE = 2
 
-
-class TemplateSlotDefaultType(IntEnum):
-    NO_DEFAULT = 0
-    STATIC_DEFAULT = 1
-    DYNAMIC_DEFAULT = 2
 */

@@ -139,7 +139,7 @@ func factPPString(env *Environment, factptr unsafe.Pointer) string {
 	return C.GoString(buf)
 }
 
-func slotValue(env *Environment, factptr unsafe.Pointer, slot string) (interface{}, error) {
+func slotValue(env *Environment, factptr unsafe.Pointer, slot Symbol) (interface{}, error) {
 	implied := C.implied_deftemplate(C.EnvFactDeftemplate(env.env, factptr))
 
 	if implied == 1 && slot != "" {
@@ -147,8 +147,8 @@ func slotValue(env *Environment, factptr unsafe.Pointer, slot string) (interface
 	}
 
 	var cslot *C.char
-	if slot != "" {
-		cslot := C.CString(slot)
+	if slot != Symbol("") {
+		cslot = C.CString(string(slot))
 		defer C.free(unsafe.Pointer(cslot))
 	}
 	data := createDataObject(env)

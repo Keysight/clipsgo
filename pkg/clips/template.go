@@ -23,6 +23,30 @@ type TemplateSlot struct {
 	name string
 }
 
+// TemplateSlotDefaultType is used to specify how default is specifified for a slot within a template
+type TemplateSlotDefaultType int
+
+const (
+	NO_DEFAULT TemplateSlotDefaultType = iota
+	STATIC_DEFAULT
+	DYNAMIC_DEFAULT
+)
+
+var templateSlotDefaultTypes = [...]string{
+	"NO_DEFAULT",
+	"STATIC_DEFAULT",
+	"DYNAMIC_DEFAULT",
+}
+
+func (tsdt TemplateSlotDefaultType) String() string {
+	return templateSlotDefaultTypes[tsdt]
+}
+
+// CVal returns the value as appropriate for a C call
+func (tsdt TemplateSlotDefaultType) CVal() C.int {
+	return C.int(tsdt)
+}
+
 func createTemplate(env *Environment, tplptr unsafe.Pointer) *Template {
 	return &Template{
 		env:    env,
@@ -127,11 +151,11 @@ func (t *Template) Slots() map[string]*TemplateSlot {
 	}
 	ret := make(map[string]*TemplateSlot, len(names))
 	for _, name := range names {
-		namestr, ok := name.(string)
+		namestr, ok := name.(Symbol)
 		if !ok {
 			panic("Unexpected data returned from CLIPS for slot names")
 		}
-		ret[namestr] = t.createTemplateSlot(namestr)
+		ret[string(namestr)] = t.createTemplateSlot(string(namestr))
 	}
 	return ret
 }
@@ -161,123 +185,153 @@ func (t *Template) createTemplateSlot(name string) *TemplateSlot {
 	}
 }
 
-/*
-class TemplateSlot(object):
-    """Template Facts organize the information within Slots.
+// Equals checks if the other templateslot represents the same slot
+func (ts *TemplateSlot) Equals(other *TemplateSlot) bool {
+	if other == nil {
+		return false
+	}
+	return ts.tpl.Equals(other.tpl) && ts.name == other.name
+}
 
-    Slots might restrict the type or amount of data they store.
+func (ts *TemplateSlot) String() string {
+	return ts.name
+}
 
-    """
+// Name returns the name of this slot
+func (ts *TemplateSlot) Name() string {
+	return ts.name
+}
 
-    __slots__ = '_env', '_tpl', '_name'
+// Multifield returns true if the slot is a multifield slot
+func (ts *TemplateSlot) Multifield() bool {
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
+	ret := C.EnvDeftemplateSlotMultiP(ts.tpl.env.env, ts.tpl.tplptr, cname)
+	if ret == 1 {
+		return true
+	}
+	return false
+}
 
-    def __init__(self, env, tpl, name):
-        self._env = env
-        self._tpl = tpl
-        self._name = name
+// Types returns the set of value types for this slot
+func (ts *TemplateSlot) Types() []Symbol {
+	data := createDataObject(ts.tpl.env)
+	defer data.Delete()
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
 
-    def __hash__(self):
-        return hash(self._tpl) + hash(self._name)
+	C.EnvDeftemplateSlotTypes(ts.tpl.env.env, ts.tpl.tplptr, cname, data.byRef())
+	dv := data.Value()
+	ilist, ok := dv.([]interface{})
+	if !ok {
+		panic("Unexpected response from CLIPS for response types")
+	}
+	ret := make([]Symbol, len(ilist))
+	i := 0
+	for _, v := range ilist {
+		ret[i], ok = v.(Symbol)
+		if !ok {
+			panic("Unexpected response from CLIPS for a response type")
+		}
+		i++
+	}
+	return ret
+}
 
-    def __eq__(self, slot):
-        return self._tpl == slot._tpl and self._name == slot._name
+// IntRange returns the numeric range for the slot for integer values - e.g. low, haslow, high, hashigh := ts.Range()
+func (ts *TemplateSlot) IntRange() (low int64, hasLow bool, high int64, hasHigh bool) {
+	data := createDataObject(ts.tpl.env)
+	defer data.Delete()
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
 
-    def __str__(self):
-        return self.name
+	C.EnvDeftemplateSlotRange(ts.tpl.env.env, ts.tpl.tplptr, cname, data.byRef())
+	dv := data.Value()
+	ilist, ok := dv.([]interface{})
+	if !ok {
+		return 0, false, 0, false
+	}
+	if len(ilist) != 2 {
+		panic("Unexpected response from CLIPS for range")
+	}
 
-    def __repr__(self):
-        return "%s: %s" % (self.__class__.__name__, self.name)
+	// fmt.Printf("%v / %v\n", reflect.TypeOf(ilist[0]), reflect.TypeOf(ilist[1]))
+	// A Symbol represents infinity
+	low, hasLow = ilist[0].(int64)
+	high, hasHigh = ilist[1].(int64)
+	return
+}
 
-    @property
-    def name(self):
-        """The slot name."""
-        return self._name.decode()
+// FloatRange returns the numeric range for the slot for floating point values - e.g. low, haslow, high, hashigh := ts.Range()
+func (ts *TemplateSlot) FloatRange() (low float64, hasLow bool, high float64, hasHigh bool) {
+	data := createDataObject(ts.tpl.env)
+	defer data.Delete()
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
 
-    @property
-    def multifield(self):
-        """True if the slot is a multifield slot."""
-        return bool(lib.EnvDeftemplateSlotMultiP(
-            self._env, self._tpl, self._name))
+	C.EnvDeftemplateSlotRange(ts.tpl.env.env, ts.tpl.tplptr, cname, data.byRef())
+	dv := data.Value()
+	ilist, ok := dv.([]interface{})
+	if !ok {
+		return 0, false, 0, false
+	}
+	if len(ilist) != 2 {
+		panic("Unexpected response from CLIPS for range")
+	}
 
-    @property
-    def types(self):
-        """A tuple containing the value types for this Slot.
+	// fmt.Printf("%v / %v\n", reflect.TypeOf(ilist[0]), reflect.TypeOf(ilist[1]))
+	// A Symbol represents infinity
+	low, hasLow = ilist[0].(float64)
+	high, hasHigh = ilist[1].(float64)
+	return
+}
 
-        The Python equivalent of the CLIPS deftemplate-slot-types function.
+// Cardinality returns the cardinality for the slot
+func (ts *TemplateSlot) Cardinality() (low int64, high int64, hasHigh bool) {
+	data := createDataObject(ts.tpl.env)
+	defer data.Delete()
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
 
-        """
-        data = clips.data.DataObject(self._env)
+	C.EnvDeftemplateSlotCardinality(ts.tpl.env.env, ts.tpl.tplptr, cname, data.byRef())
+	dv := data.Value()
+	ilist, ok := dv.([]interface{})
+	if !ok || len(ilist) != 2 {
+		return 0, 0, false
+	}
+	low, _ = ilist[0].(int64)
+	high, hasHigh = ilist[1].(int64)
+	return
+}
 
-        lib.EnvDeftemplateSlotTypes(
-            self._env, self._tpl, self._name, data.byref)
+// DefaultType returns the type of default value for this slot
+func (ts *TemplateSlot) DefaultType() TemplateSlotDefaultType {
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
+	ret := C.EnvDeftemplateSlotDefaultP(ts.tpl.env.env, ts.tpl.tplptr, cname)
+	return TemplateSlotDefaultType(ret)
+}
 
-        return tuple(data.value) if isinstance(data.value, list) else ()
+// DefaultValue returns a default value for the slot.  (This might be a new, unique value for DYNAMIC_DEFAULT defaults)
+func (ts *TemplateSlot) DefaultValue() interface{} {
+	data := createDataObject(ts.tpl.env)
+	defer data.Delete()
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
 
-    @property
-    def range(self):
-        """A tuple containing the numeric range for this Slot.
+	C.EnvDeftemplateSlotDefaultValue(ts.tpl.env.env, ts.tpl.tplptr, cname, data.byRef())
+	return data.Value()
+}
 
-        The Python equivalent of the CLIPS deftemplate-slot-range function.
+// AllowedValues returns the set of allowed values for this slot, if specified
+func (ts *TemplateSlot) AllowedValues() (values []interface{}, ok bool) {
+	data := createDataObject(ts.tpl.env)
+	defer data.Delete()
+	cname := C.CString(ts.name)
+	defer C.free(unsafe.Pointer(cname))
 
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotRange(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
-
-    @property
-    def cardinality(self):
-        """A tuple containing the cardinality for this Slot.
-
-        The Python equivalent
-        of the CLIPS deftemplate-slot-cardinality function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotCardinality(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
-
-    @property
-    def default_type(self):
-        """The default value type for this Slot.
-
-        The Python equivalent of the CLIPS deftemplate-slot-defaultp function.
-
-        """
-        return TemplateSlotDefaultType(
-            lib.EnvDeftemplateSlotDefaultP(self._env, self._tpl, self._name))
-
-    @property
-    def default_value(self):
-        """The default value for this Slot.
-
-        The Python equivalent
-        of the CLIPS deftemplate-slot-default-value function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotDefaultValue(
-            self._env, self._tpl, self._name, data.byref)
-
-        return data.value
-
-    @property
-    def allowed_values(self):
-        """A tuple containing the allowed values for this Slot.
-
-        The Python equivalent of the CLIPS slot-allowed-values function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotAllowedValues(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
-*/
+	C.EnvDeftemplateSlotAllowedValues(ts.tpl.env.env, ts.tpl.tplptr, cname, data.byRef())
+	dv := data.Value()
+	values, ok = dv.([]interface{})
+	return
+}

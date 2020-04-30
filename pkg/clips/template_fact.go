@@ -5,7 +5,9 @@ package clips
 // #include <clips.h>
 import "C"
 import (
+	"fmt"
 	"runtime"
+	"strings"
 	"unsafe"
 )
 
@@ -36,174 +38,122 @@ func (f *TemplateFact) Delete() {
 
 // Index returns the index number of this fact within CLIPS
 func (f *TemplateFact) Index() int {
-	return 0
+	return int(C.EnvFactIndex(f.env.env, f.factptr))
 }
 
 // Asserted returns true if the fact has been asserted.
 func (f *TemplateFact) Asserted() bool {
-	return false
+	if f.Index() == 0 {
+		return false
+	}
+	if C.EnvFactExistp(f.env.env, f.factptr) != 1 {
+		return false
+	}
+	return true
 }
 
 // Assert asserts the fact
 func (f *TemplateFact) Assert() error {
+	if f.Asserted() {
+		return fmt.Errorf("Fact already asserted")
+	}
+
+	ret := C.EnvAssignFactSlotDefaults(f.env.env, f.factptr)
+	if ret != 1 {
+		return EnvError(f.env, "Unable to set defaults for fact")
+	}
+
+	factptr := C.EnvAssert(f.env.env, f.factptr)
+	if factptr == nil {
+		return EnvError(f.env, "Unable to assert fact")
+	}
 	return nil
 }
 
 // Retract retracts the fact from CLIPS
 func (f *TemplateFact) Retract() error {
+	ret := C.EnvRetract(f.env.env, f.factptr)
+	if ret != 1 {
+		return EnvError(f.env, "Unable to retract fact")
+	}
 	return nil
 }
 
 // Template returns the template defining this fact
 func (f *TemplateFact) Template() *Template {
-	return nil
+	tplptr := C.EnvFactDeftemplate(f.env.env, f.factptr)
+	return createTemplate(f.env, tplptr)
 }
 
 // String returns a string representation of the fact
 func (f *TemplateFact) String() string {
-	return ""
+	ret := factPPString(f.env, f.factptr)
+	split := strings.SplitN(ret, "     ", 2)
+	return split[len(split)-1]
 }
 
 // Equals returns true if this fact equals the given fact
-func (f *TemplateFact) Equals(Fact) bool {
-	return false
+func (f *TemplateFact) Equals(otherfact Fact) bool {
+	other, ok := otherfact.(*TemplateFact)
+	if !ok {
+		return false
+	}
+	return f.factptr == other.factptr
 }
 
 // Slots returns a function that can be called to get the next slot for this fact. Will return nil when no more slots remain
 func (f *TemplateFact) Slots() (map[string]interface{}, error) {
-	/*
-		data := createDataObject(f.env)
-		defer data.Delete()
-		   lib.EnvDeftemplateSlotNames(env, tpl, data.byref)
+	data := createDataObject(f.env)
+	defer data.Delete()
 
-		   return ((s, slot_value(env, fact, s.encode())) for s in data.value)
-	*/
-	return nil, nil
+	tplptr := C.EnvFactDeftemplate(f.env.env, f.factptr)
+	C.EnvDeftemplateSlotNames(f.env.env, tplptr, data.byRef())
+	namesblob := data.Value()
+	names, ok := namesblob.([]interface{})
+	if !ok {
+		panic("Unexpected data returned from CLIPS for slot names")
+	}
+
+	ret := make(map[string]interface{}, len(names))
+	var err error
+	for _, name := range names {
+		namestr, ok := name.(Symbol)
+		if !ok {
+			panic("Unexpected data returned from CLIPS for slot names")
+		}
+		ret[string(namestr)], err = slotValue(f.env, f.factptr, namestr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
 }
 
 // Slot returns the value stored in the given slot
-func (f *TemplateFact) Slot(string) (interface{}, error) {
-	return nil, nil
+func (f *TemplateFact) Slot(name string) (interface{}, error) {
+	return slotValue(f.env, f.factptr, Symbol(name))
 }
 
-/*
+// Set alters the item at a specific in the multifield
+func (f *TemplateFact) Set(slot string, value interface{}) error {
+	if f.Asserted() {
+		return fmt.Errorf("Unable to change asserted fact")
+	}
+	data := createDataObject(f.env)
+	defer data.Delete()
+	cslot := C.CString(slot)
+	defer C.free(unsafe.Pointer(cslot))
 
-class Fact(object):
-    """CLIPS Fact base class."""
+	data.SetValue(value)
 
-    __slots__ = '_env', '_fact'
-
-    def __init__(self, env, fact):
-        self._env = env
-        self._fact = fact
-        lib.EnvIncrementFactCount(self._env, self._fact)
-
-    def __del__(self):
-        try:
-            lib.EnvDecrementFactCount(self._env, self._fact)
-        except (AttributeError, TypeError):
-            pass  # mostly happening during interpreter shutdown
-
-    def __hash__(self):
-        return hash(self._fact)
-
-    def __eq__(self, fact):
-        return self._fact == fact._fact
-
-    def __str__(self):
-        string = fact_pp_string(self._env, self._fact)
-
-        return string.split('     ', 1)[-1]
-
-    def __repr__(self):
-        return "%s: %s" % (
-            self.__class__.__name__, fact_pp_string(self._env, self._fact))
-
-    @property
-    def index(self):
-        """The fact index."""
-        return lib.EnvFactIndex(self._env, self._fact)
-
-    @property
-    def asserted(self):
-        """True if the fact has been asserted within CLIPS."""
-        # https://sourceforge.net/p/clipsrules/discussion/776945/thread/4f04bb9e/
-        if self.index == 0:
-            return False
-
-        return bool(lib.EnvFactExistp(self._env, self._fact))
-
-    @property
-    def template(self):
-        """The associated Template."""
-        return Template(
-            self._env, lib.EnvFactDeftemplate(self._env, self._fact))
-
-    def assertit(self):
-        """Assert the fact within the CLIPS environment."""
-        if self.asserted:
-            raise RuntimeError("Fact already asserted")
-
-        lib.EnvAssignFactSlotDefaults(self._env, self._fact)
-
-        if lib.EnvAssert(self._env, self._fact) == ffi.NULL:
-            raise CLIPSError(self._env)
-
-    def retract(self):
-        """Retract the fact from the CLIPS environment."""
-        if lib.EnvRetract(self._env, self._fact) != 1:
-            raise CLIPSError(self._env)
-
-class TemplateFact(Fact):
-    """An Template Fact or Unordered Fact is a dictionary
-    where each slot name is a key.
-
-    """
-
-    def __iter__(self):
-        return chain(slot_values(self._env, self._fact, self.template._tpl))
-
-    def __len__(self):
-        slots = slot_values(self._env, self._fact, self.template._tpl)
-
-        return len(tuple(slots))
-
-    def __getitem__(self, key):
-        slot = slot_value(self._env, self._fact, str(key).encode())
-
-        if slot is not None:
-            return slot
-
-        raise KeyError(
-            "'%s' fact has not slot '%s'" % (self.template.name, key))
-
-    def __setitem__(self, key, value):
-        if self.asserted:
-            raise RuntimeError("Fact already asserted")
-
-        data = clips.data.DataObject(self._env)
-        data.value = value
-
-        ret = lib.EnvPutFactSlot(
-            self._env, self._fact, str(key).encode(), data.byref)
-        if ret != 1:
-            if key not in (s.name for s in self.template.slots()):
-                raise KeyError(
-                    "'%s' fact has not slot '%s'" % (self.template.name, key))
-
-            raise CLIPSError(self._env)
-
-    def update(self, sequence=None, **mapping):
-        """Add multiple elements to the fact."""
-        if sequence is not None:
-            if isinstance(sequence, dict):
-                for slot in sequence:
-                    self[slot] = sequence[slot]
-            else:
-                for slot, value in sequence:
-                    self[slot] = value
-        if mapping:
-            for slot in sequence:
-				self[slot] = sequence[slot]
-
-*/
+	ret := C.EnvPutFactSlot(f.env.env, f.factptr, cslot, data.byRef())
+	if ret != 1 {
+		slots := f.Template().Slots()
+		_, ok := slots[slot]
+		if !ok {
+			return fmt.Errorf(`Fact %d does not have slot "%s"`, f.Index(), slot)
+		}
+		return EnvError(f.env, "Unable to set slot value")
+	}
+	return nil
+}
