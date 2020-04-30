@@ -140,13 +140,13 @@ func createDataObject(env *Environment) *DataObject {
 	data := C.data_object_ptr(datamem)
 	ret := createDataObjectInitialized(env, data)
 	runtime.SetFinalizer(ret, func(data *DataObject) {
-		data.Close()
+		data.Delete()
 	})
 	return ret
 }
 
-// Close frees up associated memory
-func (do *DataObject) Close() {
+// Delete frees up associated memory
+func (do *DataObject) Delete() {
 	if do.data != nil {
 		C.free(unsafe.Pointer(do.data))
 	}
@@ -213,7 +213,8 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 	return SYMBOL
 }
 
-func (do *DataObject) setValue(value interface{}) {
+// SetValue copies the go value into the dataobject
+func (do *DataObject) SetValue(value interface{}) {
 	var dtype Type
 	if do.typ < 0 {
 		dtype = do.clipsTypeFor(value)

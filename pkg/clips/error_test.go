@@ -9,7 +9,7 @@ import (
 func TestError(t *testing.T) {
 	t.Run("Error code", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		_, err := env.Eval("(create$ 1 2 3")
 		assert.ErrorContains(t, err, "Unable to parse")
@@ -20,7 +20,7 @@ func TestError(t *testing.T) {
 
 	t.Run("Error message", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		_, err := env.Eval("(create$ 1 2 3")
 		assert.ErrorContains(t, err, "Unable to parse")

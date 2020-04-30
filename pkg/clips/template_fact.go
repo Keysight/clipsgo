@@ -5,6 +5,7 @@ package clips
 // #include <clips.h>
 import "C"
 import (
+	"runtime"
 	"unsafe"
 )
 
@@ -14,8 +15,23 @@ type TemplateFact struct {
 	factptr unsafe.Pointer
 }
 
-// Template is an unordered fact
-type Template interface {
+func createTemplateFact(env *Environment, factptr unsafe.Pointer) *TemplateFact {
+	ret := &TemplateFact{
+		env:     env,
+		factptr: factptr,
+	}
+	runtime.SetFinalizer(ret, func(*TemplateFact) {
+		ret.Delete()
+	})
+	return ret
+}
+
+// Delete drops the reference to the fact in CLIPS. should be called when done with the fact
+func (f *TemplateFact) Delete() {
+	if f.factptr != nil {
+		C.EnvDecrementFactCount(f.env.env, f.factptr)
+		f.factptr = nil
+	}
 }
 
 // Index returns the index number of this fact within CLIPS
@@ -23,23 +39,23 @@ func (f *TemplateFact) Index() int {
 	return 0
 }
 
-// Inserted returns true if the fact has been asserted. (We adopt here the DROOLS terminology to avoid confusing with Go assert)
-func (f *TemplateFact) Inserted() bool {
+// Asserted returns true if the fact has been asserted.
+func (f *TemplateFact) Asserted() bool {
 	return false
 }
 
-// Insert asserts the fact (We adopt here the DROOLS convention to avoid confusion with the Go assert)
-func (f *TemplateFact) Insert() {
-
+// Assert asserts the fact
+func (f *TemplateFact) Assert() error {
+	return nil
 }
 
 // Retract retracts the fact from CLIPS
-func (f *TemplateFact) Retract() {
-
+func (f *TemplateFact) Retract() error {
+	return nil
 }
 
 // Template returns the template defining this fact
-func (f *TemplateFact) Template() Template {
+func (f *TemplateFact) Template() *Template {
 	return nil
 }
 
@@ -48,27 +64,96 @@ func (f *TemplateFact) String() string {
 	return ""
 }
 
-// Delete drops the reference to the fact in CLIPS. should be called when done with the fact
-func (f *TemplateFact) Delete() {
-
-}
-
 // Equals returns true if this fact equals the given fact
 func (f *TemplateFact) Equals(Fact) bool {
 	return false
 }
 
-// Iterator returns a function that can be called to get the next slot for this fact. Will return nil when no more slots remain
-func (f *TemplateFact) Iterator() func() (string, interface{}) {
-	return nil
+// Slots returns a function that can be called to get the next slot for this fact. Will return nil when no more slots remain
+func (f *TemplateFact) Slots() (map[string]interface{}, error) {
+	/*
+		data := createDataObject(f.env)
+		defer data.Delete()
+		   lib.EnvDeftemplateSlotNames(env, tpl, data.byref)
+
+		   return ((s, slot_value(env, fact, s.encode())) for s in data.value)
+	*/
+	return nil, nil
 }
 
 // Slot returns the value stored in the given slot
-func (f *TemplateFact) Slot(string) interface{} {
-	return nil
+func (f *TemplateFact) Slot(string) (interface{}, error) {
+	return nil, nil
 }
 
 /*
+
+class Fact(object):
+    """CLIPS Fact base class."""
+
+    __slots__ = '_env', '_fact'
+
+    def __init__(self, env, fact):
+        self._env = env
+        self._fact = fact
+        lib.EnvIncrementFactCount(self._env, self._fact)
+
+    def __del__(self):
+        try:
+            lib.EnvDecrementFactCount(self._env, self._fact)
+        except (AttributeError, TypeError):
+            pass  # mostly happening during interpreter shutdown
+
+    def __hash__(self):
+        return hash(self._fact)
+
+    def __eq__(self, fact):
+        return self._fact == fact._fact
+
+    def __str__(self):
+        string = fact_pp_string(self._env, self._fact)
+
+        return string.split('     ', 1)[-1]
+
+    def __repr__(self):
+        return "%s: %s" % (
+            self.__class__.__name__, fact_pp_string(self._env, self._fact))
+
+    @property
+    def index(self):
+        """The fact index."""
+        return lib.EnvFactIndex(self._env, self._fact)
+
+    @property
+    def asserted(self):
+        """True if the fact has been asserted within CLIPS."""
+        # https://sourceforge.net/p/clipsrules/discussion/776945/thread/4f04bb9e/
+        if self.index == 0:
+            return False
+
+        return bool(lib.EnvFactExistp(self._env, self._fact))
+
+    @property
+    def template(self):
+        """The associated Template."""
+        return Template(
+            self._env, lib.EnvFactDeftemplate(self._env, self._fact))
+
+    def assertit(self):
+        """Assert the fact within the CLIPS environment."""
+        if self.asserted:
+            raise RuntimeError("Fact already asserted")
+
+        lib.EnvAssignFactSlotDefaults(self._env, self._fact)
+
+        if lib.EnvAssert(self._env, self._fact) == ffi.NULL:
+            raise CLIPSError(self._env)
+
+    def retract(self):
+        """Retract the fact from the CLIPS environment."""
+        if lib.EnvRetract(self._env, self._fact) != 1:
+            raise CLIPSError(self._env)
+
 class TemplateFact(Fact):
     """An Template Fact or Unordered Fact is a dictionary
     where each slot name is a key.
@@ -121,224 +206,4 @@ class TemplateFact(Fact):
             for slot in sequence:
 				self[slot] = sequence[slot]
 
-    """A Fact Template is a formal representation of the fact data structure.
-
-    In CLIPS, Templates are defined via the (deftemplate) statement.
-
-    Templates allow to create new facts
-    to be asserted within the CLIPS environment.
-
-    Implied facts are associated to implied templates. Implied templates
-    have a limited set of features. For example, they do not support slots.
-
-    """
-
-    __slots__ = '_env', '_tpl'
-
-    def __init__(self, env, tpl):
-        self._env = env
-        self._tpl = tpl
-
-    def __hash__(self):
-        return hash(self._tpl)
-
-    def __eq__(self, tpl):
-        return self._tpl == tpl._tpl
-
-    def __str__(self):
-        return template_pp_string(self._env, self._tpl)
-
-    def __repr__(self):
-        string = template_pp_string(self._env, self._tpl)
-
-        return "%s: %s" % (self.__class__.__name__, string)
-
-    @property
-    def name(self):
-        """Template name."""
-        return ffi.string(
-            lib.EnvGetDeftemplateName(self._env, self._tpl)).decode()
-
-    @property
-    def module(self):
-        """The module in which the Template is defined.
-
-        Python equivalent of the CLIPS deftemplate-module command.
-
-        """
-        modname = ffi.string(lib.EnvDeftemplateModule(self._env, self._tpl))
-        defmodule = lib.EnvFindDefmodule(self._env, modname)
-
-        return Module(self._env, defmodule)
-
-    @property
-    def implied(self):
-        """True if the Template is implied."""
-        return bool(lib.implied_deftemplate(self._tpl))
-
-    @property
-    def watch(self):
-        """Whether or not the Template is being watched."""
-        return bool(lib.EnvGetDeftemplateWatch(self._env, self._tpl))
-
-    @watch.setter
-    def watch(self, flag):
-        """Whether or not the Template is being watched."""
-        lib.EnvSetDeftemplateWatch(self._env, int(flag), self._tpl)
-
-    @property
-    def deletable(self):
-        """True if the Template can be deleted."""
-        return bool(lib.EnvIsDeftemplateDeletable(self._env, self._tpl))
-
-    def slots(self):
-        """Iterate over the Slots of the Template."""
-        if self.implied:
-            return ()
-
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotNames(self._env, self._tpl, data.byref)
-
-        return tuple(
-            TemplateSlot(self._env, self._tpl, n.encode()) for n in data.value)
-
-    def new_fact(self):
-        """Create a new Fact from this template."""
-        fact = lib.EnvCreateFact(self._env, self._tpl)
-        if fact == ffi.NULL:
-            raise CLIPSError(self._env)
-
-        return new_fact(self._env, fact)
-
-    def undefine(self):
-        """Undefine the Template.
-
-        Python equivalent of the CLIPS undeftemplate command.
-
-        The object becomes unusable after this method has been called.
-
-        """
-        if lib.EnvUndeftemplate(self._env, self._tpl) != 1:
-            raise CLIPSError(self._env)
-
-
-class TemplateSlot(object):
-    """Template Facts organize the information within Slots.
-
-    Slots might restrict the type or amount of data they store.
-
-    """
-
-    __slots__ = '_env', '_tpl', '_name'
-
-    def __init__(self, env, tpl, name):
-        self._env = env
-        self._tpl = tpl
-        self._name = name
-
-    def __hash__(self):
-        return hash(self._tpl) + hash(self._name)
-
-    def __eq__(self, slot):
-        return self._tpl == slot._tpl and self._name == slot._name
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return "%s: %s" % (self.__class__.__name__, self.name)
-
-    @property
-    def name(self):
-        """The slot name."""
-        return self._name.decode()
-
-    @property
-    def multifield(self):
-        """True if the slot is a multifield slot."""
-        return bool(lib.EnvDeftemplateSlotMultiP(
-            self._env, self._tpl, self._name))
-
-    @property
-    def types(self):
-        """A tuple containing the value types for this Slot.
-
-        The Python equivalent of the CLIPS deftemplate-slot-types function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotTypes(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
-
-    @property
-    def range(self):
-        """A tuple containing the numeric range for this Slot.
-
-        The Python equivalent of the CLIPS deftemplate-slot-range function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotRange(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
-
-    @property
-    def cardinality(self):
-        """A tuple containing the cardinality for this Slot.
-
-        The Python equivalent
-        of the CLIPS deftemplate-slot-cardinality function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotCardinality(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
-
-    @property
-    def default_type(self):
-        """The default value type for this Slot.
-
-        The Python equivalent of the CLIPS deftemplate-slot-defaultp function.
-
-        """
-        return TemplateSlotDefaultType(
-            lib.EnvDeftemplateSlotDefaultP(self._env, self._tpl, self._name))
-
-    @property
-    def default_value(self):
-        """The default value for this Slot.
-
-        The Python equivalent
-        of the CLIPS deftemplate-slot-default-value function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotDefaultValue(
-            self._env, self._tpl, self._name, data.byref)
-
-        return data.value
-
-    @property
-    def allowed_values(self):
-        """A tuple containing the allowed values for this Slot.
-
-        The Python equivalent of the CLIPS slot-allowed-values function.
-
-        """
-        data = clips.data.DataObject(self._env)
-
-        lib.EnvDeftemplateSlotAllowedValues(
-            self._env, self._tpl, self._name, data.byref)
-
-        return tuple(data.value) if isinstance(data.value, list) else ()
 */

@@ -10,7 +10,7 @@ package clips
 // }
 import "C"
 import (
-	"runtime"
+	"fmt"
 	"unsafe"
 )
 
@@ -19,17 +19,17 @@ type Fact interface {
 	// Index returns the index number of this fact within CLIPS
 	Index() int
 
-	// Inserted returns true if the fact has been asserted. (We adopt here the DROOLS terminology to avoid confusing with Go assert)
-	Inserted() bool
+	// Asserted returns true if the fact has been asserted.
+	Asserted() bool
 
-	// Insert asserts the fact (We adopt here the DROOLS convention to avoid confusion with the Go assert)
-	Insert()
+	// Assert asserts the fact
+	Assert() error
 
 	// Retract retracts the fact from CLIPS
-	Retract()
+	Retract() error
 
 	// Template returns the template defining this fact
-	Template() Template
+	Template() *Template
 
 	// String returns a string representation of the fact
 	String() string
@@ -39,43 +39,24 @@ type Fact interface {
 
 	// Equals returns true if this fact equals the given fact
 	Equals(Fact) bool
+
+	// Slots returns a *copy* of slot values for each slot in this fact
+	Slots() (map[string]interface{}, error)
 }
 
-// FactIterator returns a function that can be called to iterate over all facts known to CLIPS
-func (env *Environment) FactIterator() func() Fact {
-	var started bool
-	var factptr unsafe.Pointer
-
-	retfun := func() Fact {
-		if factptr != nil {
-			C.EnvDecrementFactCount(env.env, factptr)
-		}
-		if factptr != nil || !started {
-			factptr = C.EnvGetNextFact(env.env, factptr)
-			started = true
-		}
-		if factptr != nil {
-			C.EnvIncrementFactCount(env.env, factptr)
-			return env.newFact(factptr)
-		}
-		return nil
+// Facts returns a slice of all facts known to CLIPS
+func (env *Environment) Facts() []Fact {
+	ret := make([]Fact, 0, 10)
+	factptr := C.EnvGetNextFact(env.env, nil)
+	for factptr != nil {
+		ret = append(ret, env.newFact(factptr))
+		factptr = C.EnvGetNextFact(env.env, factptr)
 	}
-	runtime.SetFinalizer(&retfun, func(fun *func() Fact) {
-		if factptr != nil {
-			C.EnvDecrementFactCount(env.env, factptr)
-			factptr = nil
-		}
-	})
-	return retfun
+	return ret
 }
 
-// TemplateIterator returns a function that can be called to iterate over all facts known to CLIPS
-func (env *Environment) TemplateIterator() func() Template {
-	return nil
-}
-
-// InsertString asserts a fact as a string. (We adopt here the insert terminology from DROOLS to avoid confusion with the Go assert)
-func (env *Environment) InsertString(factstr string) (Fact, error) {
+// AssertString asserts a fact as a string.
+func (env *Environment) AssertString(factstr string) (Fact, error) {
 	cfactstr := C.CString(factstr)
 	defer C.free(unsafe.Pointer(cfactstr))
 	factptr := C.EnvAssertString(env.env, cfactstr)
@@ -121,77 +102,60 @@ func (env *Environment) SaveFacts(filename string, savemode SaveMode) error {
 	return nil
 }
 
-func (env *Environment) newFact(fact unsafe.Pointer) Fact {
-	templ := C.EnvFactDeftemplate(env.env, fact)
-	if C.implied_deftemplate(templ) == 0 {
-		return &ImpliedFact{
-			env:     env,
-			factptr: fact,
-		}
+// Templates returns a slice of all defined templates
+func (env *Environment) Templates() []*Template {
+	ret := make([]*Template, 0, 10)
+	for tplptr := C.EnvGetNextDeftemplate(env.env, nil); tplptr != nil; tplptr = C.EnvGetNextDeftemplate(env.env, tplptr) {
+		ret = append(ret, createTemplate(env, tplptr))
 	}
-	return &TemplateFact{
-		env:     env,
-		factptr: fact,
-	}
+	return ret
 }
 
-/*
-   def templates(self):
-        """Iterate over the defined Templates."""
-        template = lib.EnvGetNextDeftemplate(self._env, ffi.NULL)
+// FindTemplate returns an object representing the given template name
+func (env *Environment) FindTemplate(name string) (*Template, error) {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	tplptr := C.EnvFindDeftemplate(env.env, cname)
+	if tplptr == nil {
+		return nil, fmt.Errorf(`Template "%s" not found`, name)
+	}
+	return createTemplate(env, tplptr), nil
+}
 
-        while template != ffi.NULL:
-            yield Template(self._env, template)
+func (env *Environment) newFact(fact unsafe.Pointer) Fact {
+	templ := C.EnvFactDeftemplate(env.env, fact)
+	if C.implied_deftemplate(templ) == 1 {
+		return createImpliedFact(env, fact)
+	}
+	return createTemplateFact(env, fact)
+}
 
-            template = lib.EnvGetNextDeftemplate(self._env, template)
+func factPPString(env *Environment, factptr unsafe.Pointer) string {
+	// TODO grow buf if we fill the 1k buffer, and try again
+	var bufsize C.ulong = 1024
+	buf := (*C.char)(C.malloc(C.sizeof_char * bufsize))
+	defer C.free(unsafe.Pointer(buf))
+	C.EnvGetFactPPForm(env.env, buf, bufsize-1, factptr)
+	return C.GoString(buf)
+}
 
-    def find_template(self, name):
-        """Find the Template by its name."""
-        deftemplate = lib.EnvFindDeftemplate(self._env, name.encode())
-        if deftemplate == ffi.NULL:
-            raise LookupError("Template '%s' not found" % name)
+func slotValue(env *Environment, factptr unsafe.Pointer, slot string) (interface{}, error) {
+	implied := C.implied_deftemplate(C.EnvFactDeftemplate(env.env, factptr))
 
-        return Template(self._env, deftemplate)
+	if implied == 1 && slot != "" {
+		return nil, fmt.Errorf("Invalid call to slotValue")
+	}
 
-
-
-
-
-
-def slot_value(env, fact, slot):
-    data = clips.data.DataObject(env)
-    slot = slot if slot is not None else ffi.NULL
-    implied = lib.implied_deftemplate(lib.EnvFactDeftemplate(env, fact))
-
-    if not implied and slot == ffi.NULL:
-        raise ValueError()
-
-    if bool(lib.EnvGetFactSlot(env, fact, slot, data.byref)):
-        return data.value
-
-
-def slot_values(env, fact, tpl):
-    data = clips.data.DataObject(env)
-    lib.EnvDeftemplateSlotNames(env, tpl, data.byref)
-
-    return ((s, slot_value(env, fact, s.encode())) for s in data.value)
-
-
-def fact_pp_string(env, fact):
-    buf = ffi.new('char[1024]')
-    lib.EnvGetFactPPForm(env, buf, 1024, fact)
-
-    return ffi.string(buf).decode()
-
-
-def template_pp_string(env, template):
-    strn = lib.EnvGetDeftemplatePPForm(env, template)
-
-    if strn != ffi.NULL:
-        return ffi.string(strn).decode().strip()
-    else:
-        module = ffi.string(lib.EnvDeftemplateModule(env, template)).decode()
-        name = ffi.string(lib.EnvGetDeftemplateName(env, template)).decode()
-
-        return '(deftemplate %s::%s)' % (module, name)
-*/
+	var cslot *C.char
+	if slot != "" {
+		cslot := C.CString(slot)
+		defer C.free(unsafe.Pointer(cslot))
+	}
+	data := createDataObject(env)
+	defer data.Delete()
+	ret := C.EnvGetFactSlot(env.env, factptr, cslot, data.byRef())
+	if ret != 1 {
+		return nil, EnvError(env, "Unable to get slot value")
+	}
+	return data.Value(), nil
+}

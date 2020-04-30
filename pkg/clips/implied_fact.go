@@ -5,108 +5,167 @@ package clips
 // #include <clips.h>
 import "C"
 import (
+	"fmt"
+	"runtime"
+	"strings"
 	"unsafe"
 )
 
 // ImpliedFact is an ordered fact having an implied definition
 type ImpliedFact struct {
-	env     *Environment
-	factptr unsafe.Pointer
+	env        *Environment
+	factptr    unsafe.Pointer
+	multifield []interface{}
 }
 
-// Index returns the index number of this fact within CLIPS
-func (f *ImpliedFact) Index() int {
-	return 0
+// ImpliedFactSlot is a hook to the value of a particular slot
+type ImpliedFactSlot struct {
+	fact  *ImpliedFact
+	index int
 }
 
-// Inserted returns true if the fact has been asserted. (We adopt here the DROOLS terminology to avoid confusing with Go assert)
-func (f *ImpliedFact) Inserted() bool {
-	return false
-}
-
-// Insert asserts the fact (We adopt here the DROOLS convention to avoid confusion with the Go assert)
-func (f *ImpliedFact) Insert() {
-}
-
-// Retract retracts the fact from CLIPS
-func (f *ImpliedFact) Retract() {
-
-}
-
-// Template returns the template defining this fact
-func (f *ImpliedFact) Template() Template {
-	return nil
-}
-
-// String returns a string representation of the fact
-func (f *ImpliedFact) String() string {
-	return ""
+func createImpliedFact(env *Environment, factptr unsafe.Pointer) *ImpliedFact {
+	ret := &ImpliedFact{
+		env:     env,
+		factptr: factptr,
+	}
+	C.EnvIncrementFactCount(env.env, factptr)
+	runtime.SetFinalizer(ret, func(*ImpliedFact) {
+		ret.Delete()
+	})
+	return ret
 }
 
 // Delete drops the reference to the fact in CLIPS. should be called when done with the fact
 func (f *ImpliedFact) Delete() {
+	if f.factptr != nil {
+		C.EnvDecrementFactCount(f.env.env, f.factptr)
+		f.factptr = nil
+	}
+}
 
+// Index returns the index number of this fact within CLIPS
+func (f *ImpliedFact) Index() int {
+	return int(C.EnvFactIndex(f.env.env, f.factptr))
+}
+
+// Asserted returns true if the fact has been asserted.
+func (f *ImpliedFact) Asserted() bool {
+	if f.Index() == 0 {
+		return false
+	}
+	if C.EnvFactExistp(f.env.env, f.factptr) != 1 {
+		return false
+	}
+	return true
+}
+
+// Assert asserts the fact
+func (f *ImpliedFact) Assert() error {
+	if f.Asserted() {
+		return fmt.Errorf("Fact already asserted")
+	}
+	data := createDataObject(f.env)
+	defer data.Delete()
+	if f.multifield == nil {
+		f.multifield = make([]interface{}, 0)
+	}
+	data.SetValue(f.multifield)
+	ret := C.EnvPutFactSlot(f.env.env, f.factptr, nil, data.byRef())
+	if ret != 1 {
+		return EnvError(f.env, "Unable to set slot for fact")
+	}
+	ret = C.EnvAssignFactSlotDefaults(f.env.env, f.factptr)
+	if ret != 1 {
+		return EnvError(f.env, "Unable to set defaults for fact")
+	}
+
+	factptr := C.EnvAssert(f.env.env, f.factptr)
+	if factptr == nil {
+		return EnvError(f.env, "Unable to assert fact")
+	}
+	return nil
+}
+
+// Retract retracts the fact from CLIPS
+func (f *ImpliedFact) Retract() error {
+	ret := C.EnvRetract(f.env.env, f.factptr)
+	if ret != 1 {
+		return EnvError(f.env, "Unable to retract fact")
+	}
+	return nil
+}
+
+// Template returns the template defining this fact
+func (f *ImpliedFact) Template() *Template {
+	tplptr := C.EnvFactDeftemplate(f.env.env, f.factptr)
+	return createTemplate(f.env, tplptr)
+}
+
+// String returns a string representation of the fact
+func (f *ImpliedFact) String() string {
+	ret := factPPString(f.env, f.factptr)
+	split := strings.SplitN(ret, "     ", 2)
+	return split[len(split)-1]
 }
 
 // Equals returns true if this fact equals the given fact
-func (f *ImpliedFact) Equals(Fact) bool {
-	return false
+func (f *ImpliedFact) Equals(otherfact Fact) bool {
+	other, ok := otherfact.(*ImpliedFact)
+	if !ok {
+		return false
+	}
+	return f.factptr == other.factptr
 }
 
-// Iterator returns a function that can be called to get the next slot for this fact. Will return nil when no more slots remain
-func (f *ImpliedFact) Iterator() func() interface{} {
+// Slots returns a function that can be called to get the next slot for this fact. Will return nil when no more slots remain
+func (f *ImpliedFact) Slots() (map[string]interface{}, error) {
+	val, err := slotValue(f.env, f.factptr, "")
+	if err != nil {
+		return nil, err
+	}
+	ret := make(map[string]interface{}, 1)
+	ret[""] = val
+	return ret, nil
+}
+
+// Set alters the item at a specific in the multifield
+func (f *ImpliedFact) Set(index int, value interface{}) error {
+	if f.Asserted() {
+		return fmt.Errorf("Unable to change asserted fact")
+	}
+	if f.multifield == nil || index >= len(f.multifield) {
+		return fmt.Errorf("Invalid multifield index %d", index)
+	}
+	f.multifield[index] = value
 	return nil
 }
 
-// Slot returns the value stored in the given slot
-func (f *ImpliedFact) Slot(int) interface{} {
+// Append an element to the fact
+func (f *ImpliedFact) Append(value interface{}) error {
+	if f.Asserted() {
+		return fmt.Errorf("Unable to change asserted fact")
+	}
+	if f.multifield == nil {
+		f.multifield = make([]interface{}, 0, 10)
+	}
+	f.multifield = append(f.multifield, value)
 	return nil
 }
 
-/*
-class ImpliedFact(Fact):
-	"""An Implied Fact or Ordered Fact represents its data as a list of elements
-	    similarly as for a Multifield.
-
-    """
-
-    __slots__ = '_env', '_fact', '_multifield'
-
-    def __init__(self, env, fact):
-        super(ImpliedFact, self).__init__(env, fact)
-        self._multifield = []
-
-    def __iter__(self):
-        return chain(slot_value(self._env, self._fact, None))
-
-    def __len__(self):
-        return len(slot_value(self._env, self._fact, None))
-
-    def __getitem__(self, item):
-        return tuple(self)[item]
-
-    def append(self, value):
-        """Append an element to the fact."""
-        if self.asserted:
-            raise RuntimeError("Fact already asserted")
-
-        self._multifield.append(value)
-
-    def extend(self, values):
-        """Append multiple elements to the fact."""
-        if self.asserted:
-            raise RuntimeError("Fact already asserted")
-
-        self._multifield.extend(values)
-
-    def assertit(self):
-        """Assert the fact within CLIPS."""
-        data = clips.data.DataObject(self._env)
-        data.value = list(self._multifield)
-
-        if lib.EnvPutFactSlot(
-                self._env, self._fact, ffi.NULL, data.byref) != 1:
-            raise CLIPSError(self._env)
-
-		super(ImpliedFact, self).assertit()
-*/
+// Extend Appends the contents of a slice to the fact
+func (f *ImpliedFact) Extend(values []interface{}) error {
+	if f.Asserted() {
+		return fmt.Errorf("Unable to change asserted fact")
+	}
+	if values == nil {
+		return nil
+	}
+	if f.multifield == nil {
+		f.multifield = make([]interface{}, 0, len(values))
+	}
+	for _, val := range values {
+		f.multifield = append(f.multifield, val)
+	}
+	return nil
+}

@@ -11,7 +11,7 @@ import (
 func TestLoggingRouter(t *testing.T) {
 	t.Run("Create LoggingRouter", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		var buf bytes.Buffer
 		logger := log.New(&buf, "logger: ", 0)

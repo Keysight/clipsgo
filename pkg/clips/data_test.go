@@ -10,7 +10,7 @@ import (
 func TestDataFromClips(t *testing.T) {
 	t.Run("nil Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("nil")
 		assert.NilError(t, err)
@@ -20,7 +20,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("Boolean Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("TRUE")
 		assert.NilError(t, err)
@@ -35,7 +35,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("Float Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("12.0")
 		assert.NilError(t, err)
@@ -45,7 +45,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("Integer Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("12")
 		assert.NilError(t, err)
@@ -55,7 +55,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("String Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("\"Hello World!\"")
 		assert.NilError(t, err)
@@ -66,7 +66,7 @@ func TestDataFromClips(t *testing.T) {
 	/*jjj
 	t.Run("External Address Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("\"Hello World!\"")
 		assert.NilError(t, err)
@@ -77,7 +77,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("Symbol Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("UnadornedSymbol")
 		assert.NilError(t, err)
@@ -87,7 +87,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("InstanceName Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("[gen1]")
 		assert.NilError(t, err)
@@ -97,7 +97,7 @@ func TestDataFromClips(t *testing.T) {
 
 	t.Run("MULTIFIELD Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("(create$ a b \"c\" 1.0 2 3)")
 		assert.NilError(t, err)
@@ -123,7 +123,7 @@ func TestDataFromClips(t *testing.T) {
 func TestDataIntoClips(t *testing.T) {
 	t.Run("nil Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return nil, nil
@@ -139,7 +139,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("Bool Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret := true
 		callback := func(args []interface{}) (interface{}, error) {
@@ -161,7 +161,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("Float Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return 1.7E12, nil
@@ -177,7 +177,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("Integer Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return 112, nil
@@ -193,7 +193,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("String Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return "Test String", nil
@@ -210,7 +210,7 @@ func TestDataIntoClips(t *testing.T) {
 	/*
 		t.Run("External Address Conversion", func(t *testing.T) {
 			env := CreateEnvironment()
-			defer env.Close()
+			defer env.Delete()
 
 			callback := func(args []interface{}) (interface{}, error) {
 				assert.Equal(t, len(args), 1)
@@ -229,7 +229,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("Symbol Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return Symbol("TestSymbol"), nil
@@ -245,7 +245,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("InstanceName Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return InstanceName("testname"), nil
@@ -261,7 +261,7 @@ func TestDataIntoClips(t *testing.T) {
 
 	t.Run("MULTIEFIELD Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		in := []interface{}{
 			"a",

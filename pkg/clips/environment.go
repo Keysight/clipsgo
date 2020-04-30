@@ -50,7 +50,7 @@ func CreateEnvironment() *Environment {
 	}
 	ret.errRtr = CreateErrorRouter(ret)
 	runtime.SetFinalizer(ret, func(env *Environment) {
-		env.Close()
+		env.Delete()
 	})
 	C.define_function(ret.env)
 	environmentObj[ret.env] = ret
@@ -58,8 +58,8 @@ func CreateEnvironment() *Environment {
 	return ret
 }
 
-// Close destroys the CLIPS environment
-func (env *Environment) Close() {
+// Delete destroys the CLIPS environment
+func (env *Environment) Delete() {
 	if env.env != nil {
 		delete(environmentObj, env.env)
 		C.DestroyEnvironment(env.env)

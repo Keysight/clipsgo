@@ -14,7 +14,7 @@ import (
 func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 	env, ok := environmentObj[envptr]
 	if !ok {
-		// data.setValue(fmt.Errorf("Got a callback from an unknown environment").Error())
+		// data.SetValue(fmt.Errorf("Got a callback from an unknown environment").Error())
 		return
 	}
 	arguments := make([]interface{}, 0)
@@ -25,19 +25,19 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 	fname := C.CString("go-function")
 	defer C.free(unsafe.Pointer(fname))
 	if C.EnvArgTypeCheck(envptr, fname, 1, SYMBOL.CVal(), temp.byRef()) != 1 {
-		data.setValue("Error: Invalid argument count")
+		data.SetValue("Error: Invalid argument count")
 		return
 	}
 
 	funcval := temp.Value()
 	funcname, ok := funcval.(Symbol)
 	if !ok {
-		data.setValue("Error: Unexpected argument type in callback")
+		data.SetValue("Error: Unexpected argument type in callback")
 		return
 	}
 	fn, ok := env.callback[string(funcname)]
 	if !ok {
-		data.setValue(fmt.Sprintf("Error: Unknown callback name %s", funcname))
+		data.SetValue(fmt.Sprintf("Error: Unknown callback name %s", funcname))
 		return
 	}
 
@@ -50,5 +50,5 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 		ret = fmt.Sprintf("%v: %s", reflect.TypeOf(err).String(), err.Error())
 	}
 	// return value is set into pass-by-reference argument
-	data.setValue(ret)
+	data.SetValue(ret)
 }

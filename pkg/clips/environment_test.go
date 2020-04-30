@@ -10,14 +10,14 @@ import (
 )
 
 func TestCreateEnvironment(t *testing.T) {
-	t.Run("Explicit close", func(t *testing.T) {
+	t.Run("Explicit delete", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		env.Delete()
 	})
 
 	t.Run("Load text", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Load("testdata/dopey.save")
 		assert.NilError(t, err)
@@ -25,7 +25,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Load binary", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Load("testdata/dopey.bsave")
 		assert.NilError(t, err)
@@ -33,7 +33,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Load failure", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Load("testdata/file_not_found")
 		assert.ErrorContains(t, err, "Unable")
@@ -41,7 +41,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Save text", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Load("testdata/dopey.save")
 		assert.NilError(t, err)
@@ -62,7 +62,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Save binary", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Load("testdata/dopey.save")
 		assert.NilError(t, err)
@@ -86,7 +86,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Save failure", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Load("testdata/dopey.save")
 		assert.NilError(t, err)
@@ -97,7 +97,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("BatchStar", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.BatchStar("testdata/dopey.clp")
 		assert.NilError(t, err)
@@ -105,7 +105,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("BatchStar failure", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.BatchStar("testdata/file_not_found")
 		assert.ErrorContains(t, err, "Unable")
@@ -113,7 +113,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Build", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Build("(deftemplate foo (slot bar))")
 		assert.NilError(t, err)
@@ -121,7 +121,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Build failure", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		err := env.Build("(deftemplate foo (slot bar")
 		assert.ErrorContains(t, err, "Unable")
@@ -129,7 +129,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Eval", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		ret, err := env.Eval("(rules)")
 		assert.NilError(t, err)
@@ -138,7 +138,7 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Eval Failure", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		_, err := env.Eval("(create$ 1 2 3")
 		assert.ErrorContains(t, err, "Unable to parse")
@@ -146,21 +146,21 @@ func TestCreateEnvironment(t *testing.T) {
 
 	t.Run("Clear", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		env.Clear()
 	})
 
 	t.Run("Reset", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		env.Reset()
 	})
 
 	t.Run("DefineFunction", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		argcount := 0
 		callback := func(args []interface{}) (interface{}, error) {

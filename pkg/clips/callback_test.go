@@ -10,7 +10,7 @@ import (
 func TestCallback(t *testing.T) {
 	t.Run("DefineFunction", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		argcount := 0
 		callback := func(args []interface{}) (interface{}, error) {
@@ -29,7 +29,7 @@ func TestCallback(t *testing.T) {
 
 	t.Run("Function error", func(t *testing.T) {
 		env := CreateEnvironment()
-		defer env.Close()
+		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
 			return nil, fmt.Errorf("expected")
