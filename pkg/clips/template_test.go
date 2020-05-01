@@ -152,7 +152,9 @@ func TestTemplate(t *testing.T) {
 		err = tmpl.Undefine()
 		assert.NilError(t, err)
 	})
+}
 
+func TestTemplateSlot(t *testing.T) {
 	t.Run("TemplateSlot basic values", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
