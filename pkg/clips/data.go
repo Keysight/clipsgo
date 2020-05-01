@@ -199,10 +199,12 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 			return INSTANCE_NAME
 		case "string":
 			return STRING
+		case "*clips.ImpliedFact":
+			return FACT_ADDRESS
+		case "*clips.TemplateFact":
+			return FACT_ADDRESS
 		}
 		/* TODO
-		clips.facts.ImpliedFact: clips.common.Type.FACT_ADDRESS,
-		clips.facts.TemplateFact: clips.common.Type.FACT_ADDRESS,
 		clips.classes.Instance: clips.common.Type.INSTANCE_ADDRESS,
 		*/
 	}
@@ -250,9 +252,9 @@ func (do *DataObject) goValue(dtype Type, dvalue unsafe.Pointer) interface{} {
 		return InstanceName(C.GoString(C.to_string(dvalue)))
 	case MULTIFIELD:
 		return do.multifieldToList()
+	case FACT_ADDRESS:
+		return do.env.newFact(C.to_pointer(dvalue))
 		/* TODO
-		case FACT_ADDRESS:
-			return clips.facts.new_fact(self._env, lib.to_pointer(dvalue))
 		case INSTANCE_ADDRESS:
 			return clips.classes.Instance(self._env, lib.to_pointer(dvalue))
 		*/
@@ -292,7 +294,6 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	if v, ok := dvalue.(float64); ok {
 		return C.EnvAddDouble(do.env.env, C.double(v))
 	}
-	// ffi.CData?
 	if v, ok := dvalue.(unsafe.Pointer); ok {
 		return v
 	}
@@ -314,9 +315,13 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	if v, ok := dvalue.([]interface{}); ok {
 		return do.listToMultifield(v)
 	}
+	if v, ok := dvalue.(*ImpliedFact); ok {
+		return v.factptr
+	}
+	if v, ok := dvalue.(*TemplateFact); ok {
+		return v.factptr
+	}
 	/* TODO
-	if isinstance(dvalue, (clips.facts.Fact)):
-		return dvalue._fact
 	if isinstance(dvalue, (clips.classes.Instance)):
 		return dvalue._ist
 	*/

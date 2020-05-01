@@ -114,9 +114,37 @@ func TestDataFromClips(t *testing.T) {
 		assert.Equal(t, val[5], int64(3))
 	})
 
-	/*
-		FACT
-		INSTANCE
+	t.Run("Implied Fact Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		ret, err := env.Eval("(bind ?ret (assert (foo a b c)))")
+		assert.NilError(t, err)
+		assert.Equal(t, reflect.TypeOf(ret).String(), "*clips.ImpliedFact")
+
+		f, ok := ret.(*ImpliedFact)
+		assert.Assert(t, ok)
+		assert.Equal(t, f.String(), "(foo a b c)")
+	})
+
+	t.Run("Template Fact Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build("(deftemplate foo (slot bar) (multislot baz))")
+		assert.NilError(t, err)
+
+		ret, err := env.Eval(`(bind ?ret (assert (foo)))`)
+		assert.NilError(t, err)
+		assert.Equal(t, reflect.TypeOf(ret).String(), "*clips.TemplateFact")
+
+		f, ok := ret.(*TemplateFact)
+		assert.Assert(t, ok)
+		assert.Equal(t, f.String(), "(foo (bar nil) (baz))")
+	})
+
+	/* TODO
+	INSTANCE
 	*/
 }
 
@@ -207,24 +235,24 @@ func TestDataIntoClips(t *testing.T) {
 		assert.Equal(t, ret, "Test String")
 	})
 
-	/*
-		t.Run("External Address Conversion", func(t *testing.T) {
-			env := CreateEnvironment()
-			defer env.Delete()
+	/* TODO
+	t.Run("External Address Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
 
-			callback := func(args []interface{}) (interface{}, error) {
-				assert.Equal(t, len(args), 1)
-				assert.Equal(t, args[0], "Test String")
-				return nil, nil
-			}
+		callback := func(args []interface{}) (interface{}, error) {
+			assert.Equal(t, len(args), 1)
+			assert.Equal(t, args[0], "Test String")
+			return nil, nil
+		}
 
-			err := env.DefineFunction("test-callback", callback)
-			assert.NilError(t, err)
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
 
-			ret, err := env.Eval("(test-callback \"Test String\")")
-			assert.NilError(t, err)
-			assert.Equal(t, ret, "")
-		})
+		ret, err := env.Eval("(test-callback \"Test String\")")
+		assert.NilError(t, err)
+		assert.Equal(t, ret, "")
+	})
 	*/
 
 	t.Run("Symbol Conversion", func(t *testing.T) {
@@ -294,8 +322,47 @@ func TestDataIntoClips(t *testing.T) {
 		})
 	})
 
-	/*
-		FACT
-		INSTANCE
+	t.Run("ImpliedFact Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		callback := func(args []interface{}) (interface{}, error) {
+			return args[0], nil
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		ret, err := env.Eval("(test-callback (assert (foo a b c)))")
+		assert.NilError(t, err)
+
+		fact, ok := ret.(*ImpliedFact)
+		assert.Assert(t, ok)
+		assert.Equal(t, fact.Index(), 1)
+	})
+
+	t.Run("Template Fact Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		callback := func(args []interface{}) (interface{}, error) {
+			return args[0], nil
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+		err = env.Build("(deftemplate foo (slot bar) (multislot baz))")
+		assert.NilError(t, err)
+
+		ret, err := env.Eval("(test-callback (assert (foo)))")
+		assert.NilError(t, err)
+
+		fact, ok := ret.(*TemplateFact)
+		assert.Assert(t, ok)
+		assert.Equal(t, fact.Index(), 1)
+	})
+
+	/* TODO
+	INSTANCE
 	*/
 }
