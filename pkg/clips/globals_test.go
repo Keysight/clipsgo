@@ -45,7 +45,6 @@ func TestGlobalsEnv(t *testing.T) {
 
 		glob, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob.Delete()
 		val, err := glob.Value()
 		assert.NilError(t, err)
 		assert.Equal(t, glob.Name(), "foo")
@@ -92,18 +91,15 @@ func TestGlobal(t *testing.T) {
 
 		glob, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob.Delete()
 		assert.Equal(t, glob.Name(), "foo")
 		assert.Equal(t, glob.String(), "(defglobal MAIN ?*foo* = 17)")
 
 		glob2, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob2.Delete()
 		assert.Assert(t, glob.Equals(glob2))
 
 		err = env.Build(`(defglobal ?*bar* = "another")`)
 		assert.NilError(t, err)
-		defer glob2.Delete()
 		glob2, err = env.FindGlobal("bar")
 		assert.NilError(t, err)
 		assert.Assert(t, !glob.Equals(glob2))
@@ -118,7 +114,6 @@ func TestGlobal(t *testing.T) {
 
 		glob, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob.Delete()
 
 		glob.SetValue("newval")
 		val, err := glob.Value()
@@ -135,7 +130,6 @@ func TestGlobal(t *testing.T) {
 
 		glob, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob.Delete()
 
 		assert.Equal(t, glob.Deletable(), true)
 
@@ -157,7 +151,6 @@ func TestGlobal(t *testing.T) {
 
 		glob, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob.Delete()
 
 		assert.Equal(t, glob.Watched(), false)
 		glob.Watch(true)
@@ -173,7 +166,20 @@ func TestGlobal(t *testing.T) {
 
 		glob, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		defer glob.Delete()
+
+		mod := glob.Module()
+		assert.Equal(t, mod.Name(), "MAIN")
+	})
+
+	t.Run("Undefine", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defglobal ?*foo* = 17)`)
+		assert.NilError(t, err)
+
+		glob, err := env.FindGlobal("foo")
+		assert.NilError(t, err)
 
 		err = env.Build(`(defrule globref "cause a reference to the global"
 			(foo ?var)

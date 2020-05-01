@@ -65,7 +65,6 @@ func TestModules(t *testing.T) {
 
 		module, err := env.FindModule("Foo")
 		assert.NilError(t, err)
-		defer module.Delete()
 		assert.Equal(t, module.Name(), "Foo")
 		assert.Equal(t, module.String(), `(defmodule Foo "lame module"
    (export ?ALL))
@@ -83,16 +82,13 @@ func TestModules(t *testing.T) {
 
 		module, err := env.FindModule("Foo")
 		assert.NilError(t, err)
-		defer module.Delete()
 
 		module2, err := env.FindModule("Foo")
 		assert.NilError(t, err)
-		defer module2.Delete()
 		assert.Assert(t, module.Equals(module2))
 
 		module2, err = env.FindModule("Bar")
 		assert.NilError(t, err)
-		defer module2.Delete()
 		assert.Assert(t, !module.Equals(module2))
 	})
 }

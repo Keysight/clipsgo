@@ -116,7 +116,6 @@ func TestTemplateFact(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 		assert.Assert(t, !tmpl.Implied())
 		fact, err := tmpl.NewFact()
 		assert.NilError(t, err)
@@ -150,7 +149,6 @@ func TestTemplateFact(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 		assert.Assert(t, !tmpl.Implied())
 		fact, err := tmpl.NewFact()
 		assert.NilError(t, err)
@@ -171,7 +169,6 @@ func TestTemplateFact(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 		assert.Assert(t, !tmpl.Implied())
 		fact, err := tmpl.NewFact()
 		assert.NilError(t, err)

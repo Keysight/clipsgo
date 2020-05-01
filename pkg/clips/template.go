@@ -54,11 +54,6 @@ func createTemplate(env *Environment, tplptr unsafe.Pointer) *Template {
 	}
 }
 
-// Delete deletes this template object
-func (t *Template) Delete() {
-	// no refcounting for templates
-}
-
 // Equals returns true if this template represents the same template as the given one
 func (t *Template) Equals(other *Template) bool {
 	return t.tplptr == other.tplptr
@@ -82,21 +77,10 @@ func (t *Template) Name() string {
 }
 
 // Module returns the module in which the template is defined. Equivalent to (deftempalte-module)
-func (t *Template) Module() {
-	/* TODO
-	   @property
-	   def module(self):
-	       """The module in which the Template is defined.
-
-	       Python equivalent of the CLIPS deftemplate-module command.
-
-	       """
-	       modname = ffi.string(lib.EnvDeftemplateModule(self._env, self._tpl))
-	       defmodule = lib.EnvFindDefmodule(self._env, modname)
-
-	       return Module(self._env, defmodule)
-
-	*/
+func (t *Template) Module() *Module {
+	cmodname := C.EnvDeftemplateModule(t.env.env, t.tplptr)
+	modptr := C.EnvFindDefmodule(t.env.env, cmodname)
+	return createModule(t.env, modptr)
 }
 
 // Implied returns whether the template is implied

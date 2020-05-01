@@ -56,12 +56,6 @@ func createGlobal(env *Environment, glbptr unsafe.Pointer) *Global {
 	}
 }
 
-// Delete frees any reference to CLIPS data
-func (g *Global) Delete() {
-	// nothing to do really, just being consistent with API
-	g.glbptr = nil
-}
-
 // Equals returns true if the other object represents the same global in CLIPS
 func (g *Global) Equals(other *Global) bool {
 	return g.glbptr == other.glbptr
@@ -113,20 +107,12 @@ func (g *Global) SetValue(value interface{}) error {
 	return nil
 }
 
-/*
-   @property
-   def module(self):
-       """The module in which the Global is defined.
-
-       Python equivalent of the CLIPS defglobal-module command.
-
-       """
-       modname = ffi.string(lib.EnvDefglobalModule(self._env, self._glb))
-       defmodule = lib.EnvFindDefmodule(self._env, modname)
-
-       return Module(self._env, defmodule)
-
-*/
+// Module returns a referece to the module of this global
+func (g *Global) Module() *Module {
+	modname := C.EnvDefglobalModule(g.env.env, g.glbptr)
+	modptr := C.EnvFindDefmodule(g.env.env, modname)
+	return createModule(g.env, modptr)
+}
 
 // Deletable returns true if the global can be deleted
 func (g *Global) Deletable() bool {

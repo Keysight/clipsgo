@@ -56,12 +56,6 @@ func createModule(env *Environment, modptr unsafe.Pointer) *Module {
 	}
 }
 
-// Delete drops any reference to CLIPS resources
-func (m *Module) Delete() {
-	// nothing to do really, just here for consistency
-	m.modptr = nil
-}
-
 // Equals returns true if the other module references the same CLIPS module
 func (m *Module) Equals(other *Module) bool {
 	return m.modptr == other.modptr

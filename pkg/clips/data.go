@@ -4,10 +4,6 @@ package clips
 // #cgo LDFLAGS: -L ../../clips_source -l clips
 // #include <clips.h>
 //
-// struct dataObject *data_object_ptr(void *mallocval) {
-// 	 return (struct dataObject *)mallocval;
-// }
-//
 // struct multifield *multifield_ptr(void *mallocval) {
 // 	 return (struct multifield *)mallocval;
 // }
@@ -137,7 +133,7 @@ func createDataObjectInitialized(env *Environment, data *C.struct_dataObject) *D
 
 func createDataObject(env *Environment) *DataObject {
 	datamem := C.malloc(C.sizeof_struct_dataObject)
-	data := C.data_object_ptr(datamem)
+	data := (*C.struct_dataObject)(datamem)
 	ret := createDataObjectInitialized(env, data)
 	runtime.SetFinalizer(ret, func(data *DataObject) {
 		data.Delete()

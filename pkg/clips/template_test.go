@@ -19,7 +19,6 @@ func TestTemplate(t *testing.T) {
 		assert.Assert(t, fact.Asserted())
 
 		tmpl := fact.Template()
-		defer tmpl.Delete()
 		assert.Assert(t, tmpl.Implied())
 		assert.Equal(t, tmpl.Name(), "foo")
 	})
@@ -33,11 +32,9 @@ func TestTemplate(t *testing.T) {
 		defer fact.Delete()
 
 		tmpl := fact.Template()
-		defer tmpl.Delete()
 
 		tmpl2, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl2.Delete()
 
 		assert.Assert(t, tmpl.Equals(tmpl2))
 	})
@@ -51,14 +48,12 @@ func TestTemplate(t *testing.T) {
 		defer fact.Delete()
 
 		tmpl := fact.Template()
-		defer tmpl.Delete()
 
 		fact, err = env.AssertString(`(bar a b c)`)
 		assert.NilError(t, err)
 		defer fact.Delete()
 
 		tmpl2 := fact.Template()
-		defer tmpl2.Delete()
 
 		assert.Assert(t, !tmpl.Equals(tmpl2))
 	})
@@ -72,7 +67,6 @@ func TestTemplate(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		assert.Equal(t, tmpl.String(), `(deftemplate MAIN::foo
    (slot bar)
@@ -91,7 +85,6 @@ func TestTemplate(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		assert.Assert(t, !tmpl.Watched())
 		tmpl.Watch(true)
@@ -108,7 +101,6 @@ func TestTemplate(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		assert.Assert(t, tmpl.Deletable())
 
@@ -126,7 +118,6 @@ func TestTemplate(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		_, err = env.AssertString("(foo (bar a))")
 		assert.NilError(t, err)
@@ -145,12 +136,25 @@ func TestTemplate(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		assert.Assert(t, tmpl.Deletable())
 
 		err = tmpl.Undefine()
 		assert.NilError(t, err)
+	})
+
+	t.Run("Module", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build("(deftemplate foo (slot bar) (multislot baz))")
+		assert.NilError(t, err)
+
+		tmpl, err := env.FindTemplate("foo")
+		assert.NilError(t, err)
+
+		mod := tmpl.Module()
+		assert.Equal(t, mod.Name(), "MAIN")
 	})
 }
 
@@ -164,7 +168,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		bar, ok := slots["bar"]
@@ -185,7 +188,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		bar, ok := slots["bar"]
@@ -209,7 +211,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		bar, ok := slots["bar"]
@@ -234,7 +235,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		bar, ok := slots["bar"]
@@ -271,7 +271,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		norange, ok := slots["norange"]
@@ -334,7 +333,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		notmulti, ok := slots["notmulti"]
@@ -388,7 +386,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		nodefault, ok := slots["nodefault"]
@@ -424,7 +421,6 @@ func TestTemplateSlot(t *testing.T) {
 
 		tmpl, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
-		defer tmpl.Delete()
 
 		slots := tmpl.Slots()
 		bar, ok := slots["bar"]

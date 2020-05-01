@@ -89,7 +89,6 @@ func TestImpliedFact(t *testing.T) {
 		assert.NilError(t, err)
 
 		tmpl := fact.Template()
-		defer tmpl.Delete()
 		assert.Assert(t, tmpl.Implied())
 		fact, err = tmpl.NewFact()
 		assert.NilError(t, err)
