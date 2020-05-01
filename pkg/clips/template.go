@@ -8,6 +8,7 @@ package clips
 import "C"
 import (
 	"fmt"
+	"strings"
 	"unsafe"
 )
 
@@ -63,7 +64,7 @@ func (t *Template) Equals(other *Template) bool {
 func (t *Template) String() string {
 	cstr := C.EnvGetDeftemplatePPForm(t.env.env, t.tplptr)
 	if cstr != nil {
-		return C.GoString(cstr)
+		return strings.TrimRight(C.GoString(cstr), "\n")
 	}
 	cmodule := C.EnvDeftemplateModule(t.env.env, t.tplptr)
 	name := t.Name()

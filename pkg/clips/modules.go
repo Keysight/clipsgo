@@ -6,6 +6,7 @@ package clips
 import "C"
 import (
 	"fmt"
+	"strings"
 	"unsafe"
 )
 
@@ -63,7 +64,7 @@ func (m *Module) Equals(other *Module) bool {
 
 func (m *Module) String() string {
 	module := C.EnvGetDefmodulePPForm(m.env.env, m.modptr)
-	return C.GoString(module)
+	return strings.TrimRight(C.GoString(module), "\n")
 }
 
 // Name returns the name of this module

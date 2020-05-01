@@ -67,8 +67,7 @@ func TestModules(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, module.Name(), "Foo")
 		assert.Equal(t, module.String(), `(defmodule Foo "lame module"
-   (export ?ALL))
-`)
+   (export ?ALL))`)
 	})
 
 	t.Run("Module equals", func(t *testing.T) {

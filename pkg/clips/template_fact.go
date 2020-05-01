@@ -89,7 +89,7 @@ func (f *TemplateFact) Template() *Template {
 func (f *TemplateFact) String() string {
 	ret := factPPString(f.env, f.factptr)
 	split := strings.SplitN(ret, "     ", 2)
-	return split[len(split)-1]
+	return strings.TrimRight(split[len(split)-1], "\n")
 }
 
 // Equals returns true if this fact equals the given fact

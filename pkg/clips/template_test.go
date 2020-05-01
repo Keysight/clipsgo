@@ -70,8 +70,7 @@ func TestTemplate(t *testing.T) {
 
 		assert.Equal(t, tmpl.String(), `(deftemplate MAIN::foo
    (slot bar)
-   (multislot baz))
-`)
+   (multislot baz))`)
 	})
 
 	// TODO Module
