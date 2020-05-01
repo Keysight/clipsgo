@@ -14,10 +14,10 @@ func TestFacts(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		_, err := env.AssertString(`(foo a b c)`)
+		ret, err := env.AssertString(`(foo a b c)`)
 		assert.NilError(t, err)
 
-		// TODO check out ret
+		assert.Equal(t, ret.String(), "(foo a b c)")
 	})
 
 	t.Run("Iterate over facts", func(t *testing.T) {

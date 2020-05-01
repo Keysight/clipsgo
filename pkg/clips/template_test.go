@@ -73,8 +73,6 @@ func TestTemplate(t *testing.T) {
    (multislot baz))`)
 	})
 
-	// TODO Module
-
 	t.Run("Template Watch", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

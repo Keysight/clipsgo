@@ -59,32 +59,3 @@ func (sm SaveMode) String() string {
 func (sm SaveMode) CVal() C.int {
 	return C.int(sm)
 }
-
-/* TODO
-class ClassDefaultMode(IntEnum):
-    CONVENIENCE_MODE = 0
-    CONSERVATION_MODE = 1
-
-
-class Strategy(IntEnum):
-    DEPTH = 0
-    BREADTH = 1
-    LEX = 2
-    MEA = 3
-    COMPLEXITY = 4
-    SIMPLICITY = 5
-    RANDOM = 6
-
-
-class SalienceEvaluation(IntEnum):
-    WHEN_DEFINED = 0
-    WHEN_ACTIVATED = 1
-    EVERY_CYCLE = 2
-
-
-class Verbosity(IntEnum):
-    VERBOSE = 0
-    SUCCINT = 1
-    TERSE = 2
-
-*/
