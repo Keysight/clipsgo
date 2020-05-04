@@ -31,13 +31,13 @@ func createImpliedFact(env *Environment, factptr unsafe.Pointer) *ImpliedFact {
 	}
 	C.EnvIncrementFactCount(env.env, factptr)
 	runtime.SetFinalizer(ret, func(*ImpliedFact) {
-		ret.Delete()
+		ret.Drop()
 	})
 	return ret
 }
 
-// Delete drops the reference to the fact in CLIPS. should be called when done with the fact
-func (f *ImpliedFact) Delete() {
+// Drop drops the reference to the fact in CLIPS. should be called when done with the fact
+func (f *ImpliedFact) Drop() {
 	if f.factptr != nil {
 		C.EnvDecrementFactCount(f.env.env, f.factptr)
 		f.factptr = nil

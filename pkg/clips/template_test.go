@@ -13,7 +13,7 @@ func TestTemplate(t *testing.T) {
 
 		fact, err := env.AssertString(`(foo a b c)`)
 		assert.NilError(t, err)
-		defer fact.Delete()
+		defer fact.Drop()
 
 		assert.Equal(t, fact.Index(), 1)
 		assert.Assert(t, fact.Asserted())
@@ -29,7 +29,7 @@ func TestTemplate(t *testing.T) {
 
 		fact, err := env.AssertString(`(foo a b c)`)
 		assert.NilError(t, err)
-		defer fact.Delete()
+		defer fact.Drop()
 
 		tmpl := fact.Template()
 
@@ -45,13 +45,13 @@ func TestTemplate(t *testing.T) {
 
 		fact, err := env.AssertString(`(foo a b c)`)
 		assert.NilError(t, err)
-		defer fact.Delete()
+		defer fact.Drop()
 
 		tmpl := fact.Template()
 
 		fact, err = env.AssertString(`(bar a b c)`)
 		assert.NilError(t, err)
-		defer fact.Delete()
+		defer fact.Drop()
 
 		tmpl2 := fact.Template()
 

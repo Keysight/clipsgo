@@ -34,8 +34,8 @@ type Fact interface {
 	// String returns a string representation of the fact
 	String() string
 
-	// Delete drops the reference to the fact in CLIPS. should be called when done with the fact
-	Delete()
+	// Drop drops the reference to the fact in CLIPS. should be called when done with the fact
+	Drop()
 
 	// Equals returns true if this fact equals the given fact
 	Equals(Fact) bool
@@ -66,8 +66,8 @@ func (env *Environment) AssertString(factstr string) (Fact, error) {
 	return env.newFact(factptr), nil
 }
 
-// LoadFactsFromFile loads facts from the given file
-func (env *Environment) LoadFactsFromFile(filename string) error {
+// LoadFacts loads facts from the given file
+func (env *Environment) LoadFacts(filename string) error {
 	cfilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cfilename))
 
@@ -78,8 +78,8 @@ func (env *Environment) LoadFactsFromFile(filename string) error {
 	return nil
 }
 
-// LoadFacts loads facts from the given string
-func (env *Environment) LoadFacts(factstr string) error {
+// LoadFactsFromString loads facts from the given string
+func (env *Environment) LoadFactsFromString(factstr string) error {
 	cfactstr := C.CString(factstr)
 	defer C.free(unsafe.Pointer(cfactstr))
 

@@ -12,7 +12,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		assert.Equal(t, fact.Index(), 1)
@@ -24,7 +24,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		assert.Equal(t, len(fact.String()), len("(foo a b c)"))
@@ -36,7 +36,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		slots, err := fact.Slots()
@@ -60,7 +60,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		err = fact.Retract()
@@ -74,7 +74,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 		err = fact.Assert()
 		assert.ErrorContains(t, err, "Fact already asserted")
@@ -85,7 +85,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		tmpl := fact.Template()
@@ -126,7 +126,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		slots, err := fact.Slots()
@@ -147,7 +147,7 @@ func TestImpliedFact(t *testing.T) {
 		defer env.Delete()
 
 		fact, err := env.AssertString(`(foo a b c)`)
-		defer fact.Delete()
+		defer fact.Drop()
 		assert.NilError(t, err)
 
 		factlist := env.Facts()

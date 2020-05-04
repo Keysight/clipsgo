@@ -42,7 +42,7 @@ func TestFacts(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		err := env.LoadFacts(`
+		err := env.LoadFactsFromString(`
 		(initial-fact)
 		(foo a b c)
 		(bar)
@@ -58,7 +58,7 @@ func TestFacts(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		err := env.LoadFactsFromFile("testdata/factfile.clp")
+		err := env.LoadFacts("testdata/factfile.clp")
 		assert.NilError(t, err)
 
 		// There is an initialfact to start with, so expect one extra
