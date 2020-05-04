@@ -175,4 +175,30 @@ func TestCreateEnvironment(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, argcount, 3)
 	})
+
+	t.Run("CompleteCommand", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		assert.Assert(t, env.CompleteCommand("(deftemplate bar (slot bar))"))
+		assert.Assert(t, !env.CompleteCommand("(deftemplate bar (slot bar)"))
+	})
+
+	t.Run("SendCommand", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		// try some stuff that Eval chokes on
+		err := env.SendCommand("(assert (foo a b c))")
+		assert.NilError(t, err)
+
+		err = env.SendCommand("(deftemplate bar (slot bar))")
+		assert.NilError(t, err)
+
+		err = env.SendCommand("(deftemplate baz (slot bar")
+		assert.ErrorContains(t, err, "Syntax Error")
+
+		err = env.SendCommand("(deftemplate foo (slot bar))")
+		assert.ErrorContains(t, err, "in use")
+	})
 }

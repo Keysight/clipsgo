@@ -146,3 +146,34 @@ func (env *Environment) DefineFunction(name string, callback Callback) error {
 	env.callback[name] = callback
 	return env.Build(fmt.Sprintf(defFunction, name))
 }
+
+// CompleteCommand checks the string to see if it is a complete command yet
+func (env *Environment) CompleteCommand(cmd string) bool {
+	ccmd := C.CString(cmd + "\n")
+	defer C.free(unsafe.Pointer(ccmd))
+
+	ret := int(C.CompleteCommand(ccmd))
+	if ret == 1 {
+		return true
+	}
+	return false
+}
+
+// SendCommand evaluates a command as if it were typed in the CLIPS shell
+func (env *Environment) SendCommand(cmd string) error {
+	ccmd := C.CString(cmd)
+	defer C.free(unsafe.Pointer(ccmd))
+
+	// Commands cribbed from the CLIPS shell, and inspired by PyCLIPS
+	C.FlushPPBuffer(env.env)
+	C.SetPPBufferStatus(env.env, 0)
+	ret := C.RouteCommand(env.env, ccmd, 0)
+	res := C.GetEvaluationError(env.env)
+	C.FlushPPBuffer(env.env)
+	C.SetHaltExecution(env.env, 0)
+	C.SetEvaluationError(env.env, 0)
+	if ret == 0 || res != 0 {
+		return EnvError(env, `Unable to execute command "%s"`, cmd)
+	}
+	return nil
+}
