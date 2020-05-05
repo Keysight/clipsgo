@@ -145,6 +145,7 @@ func createDataObject(env *Environment) *DataObject {
 func (do *DataObject) Delete() {
 	if do.data != nil {
 		C.free(unsafe.Pointer(do.data))
+		do.data = nil
 	}
 }
 

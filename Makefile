@@ -41,7 +41,7 @@ coverage: test
 	go tool cover -html cover.out
 
 install-clips: clips
-	install -d $(SHARED_INCLUDE_DIR)/
+	install -d $(SHARED_INCLUDE_DIR)/clips/
 	install -m 644 clips_source/*.h $(SHARED_INCLUDE_DIR)/clips/
 	install -d $(SHARED_LIBRARY_DIR)/
 	install -m 644 clips_source/libclips.so                                \
