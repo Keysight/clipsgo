@@ -42,4 +42,20 @@ func TestCallback(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, ret, "*errors.errorString: expected")
 	})
+
+	t.Run("Invalid args", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		callback := func(args []interface{}) (interface{}, error) {
+			return nil, fmt.Errorf("expected")
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		ret, err := env.Eval("(test-callback)")
+		assert.NilError(t, err)
+		assert.Equal(t, ret, "*errors.errorString: expected")
+	})
 }

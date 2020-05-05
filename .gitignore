@@ -1,5 +1,6 @@
 clips/*.c
 clips.zip
 clips_source/
+cover.out
 *.so
 *.o

@@ -15,7 +15,7 @@ func TestLoggingRouter(t *testing.T) {
 
 		var buf bytes.Buffer
 		logger := log.New(&buf, "logger: ", 0)
-		CreateLoggingRouter(env, logger)
+		lr := CreateLoggingRouter(env, logger)
 
 		_, err := env.Eval(`(printout t "Testing" crlf)`)
 		assert.NilError(t, err)
@@ -29,5 +29,12 @@ func TestLoggingRouter(t *testing.T) {
 		_, err = env.Eval(`(printout t crlf)`)
 		assert.NilError(t, err)
 		assert.Equal(t, buf.String(), "logger: 1 2 3\n")
+
+		assert.Equal(t, lr.Name(), "go-logging-router")
+		err = lr.Delete()
+		assert.NilError(t, err)
+
+		_, err = env.Eval(`(printout t "Testing" crlf)`)
+		assert.NilError(t, err)
 	})
 }

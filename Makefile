@@ -35,7 +35,10 @@ clipsgo: clips
 	$(GO) build ./pkg/...
 
 test: clips
-	GODEBUG=cgocheck=2 $(GO) test -cover ./pkg/...
+	GODEBUG=cgocheck=2 $(GO) test -coverprofile=cover.out ./pkg/...
+
+coverage: test
+	go tool cover -html cover.out
 
 install-clips: clips
 	install -d $(SHARED_INCLUDE_DIR)/
