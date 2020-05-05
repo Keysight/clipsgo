@@ -259,15 +259,180 @@ var builtins = []string{
 var primaryPrompt = "» "
 var secondaryPrompt = "+ "
 
-func completer(d prompt.Document) []prompt.Suggest {
-	/*
-		iterator, err := shellContext.lexer.Tokenise(nil, shellContext.cmd.String())
+// HighlightedWriter tries to catch selected writes and use the syntax highlighting on them
+type HighlightedWriter struct {
+	delegate     prompt.ConsoleWriter
+	writingInput bool
+}
+
+// WriteRaw to write raw byte array.
+func (hw *HighlightedWriter) WriteRaw(data []byte) {
+	hw.delegate.WriteRaw(data)
+}
+
+// Write to write safety byte array by removing control sequences.
+func (hw *HighlightedWriter) Write(data []byte) {
+	hw.delegate.Write(data)
+}
+
+// WriteRawStr to write raw string.
+func (hw *HighlightedWriter) WriteRawStr(data string) {
+	hw.delegate.WriteRawStr(data)
+}
+
+// WriteStr to write safety string by removing control sequences.
+func (hw *HighlightedWriter) WriteStr(data string) {
+	if hw.writingInput && data != "" {
+		// If prompt is trying to write input text, intercept and replace the write with syntax highlighted text
+		partial := shellContext.cmd.String() + data
+		iterator, err := shellContext.lexer.Tokenise(nil, partial)
 		if err != nil {
-			return []prompt.Suggest{}
+			hw.delegate.WriteStr(data)
+			return
 		}
-		tokens := iterator.Tokens()
-		lasttoken := tokens[len(tokens)-1]
-	*/
+		modified := strings.Builder{}
+		shellContext.formatter.Format(&modified, shellContext.style, iterator)
+		lines := strings.Split(modified.String(), "\n")
+		if strings.Contains(data, "\n") {
+			// data was a complete line, so we should output the next-to-last
+			hw.delegate.WriteRawStr(lines[len(lines)-2] + "\n")
+		} else {
+			hw.delegate.WriteRawStr(lines[len(lines)-1])
+		}
+		return
+	}
+	hw.delegate.WriteStr(data)
+}
+
+// Flush to flush buffer.
+func (hw *HighlightedWriter) Flush() error {
+	return hw.delegate.Flush()
+}
+
+// EraseScreen erases the screen with the background colour and moves the cursor to home.
+func (hw *HighlightedWriter) EraseScreen() {
+	hw.delegate.EraseScreen()
+}
+
+// EraseUp erases the screen from the current line up to the top of the screen.
+func (hw *HighlightedWriter) EraseUp() {
+	hw.delegate.EraseUp()
+}
+
+// EraseDown erases the screen from the current line down to the bottom of the screen.
+func (hw *HighlightedWriter) EraseDown() {
+	hw.delegate.EraseDown()
+}
+
+// EraseStartOfLine erases from the current cursor position to the start of the current line.
+func (hw *HighlightedWriter) EraseStartOfLine() {
+	hw.delegate.EraseStartOfLine()
+}
+
+// EraseEndOfLine erases from the current cursor position to the end of the current line.
+func (hw *HighlightedWriter) EraseEndOfLine() {
+	hw.delegate.EraseEndOfLine()
+}
+
+// EraseLine erases the entire current line.
+func (hw *HighlightedWriter) EraseLine() {
+	hw.delegate.EraseLine()
+}
+
+// ShowCursor stops blinking cursor and show.
+func (hw *HighlightedWriter) ShowCursor() {
+	hw.delegate.ShowCursor()
+}
+
+// HideCursor hides cursor.
+func (hw *HighlightedWriter) HideCursor() {
+	hw.delegate.HideCursor()
+}
+
+// CursorGoTo sets the cursor position where subsequent text will begin.
+func (hw *HighlightedWriter) CursorGoTo(row, col int) {
+	hw.delegate.CursorGoTo(row, col)
+}
+
+// CursorUp moves the cursor up by 'n' rows; the default count is 1.
+func (hw *HighlightedWriter) CursorUp(n int) {
+	hw.delegate.CursorUp(n)
+}
+
+// CursorDown moves the cursor down by 'n' rows; the default count is 1.
+func (hw *HighlightedWriter) CursorDown(n int) {
+	hw.delegate.CursorDown(n)
+}
+
+// CursorForward moves the cursor forward by 'n' columns; the default count is 1.
+func (hw *HighlightedWriter) CursorForward(n int) {
+	hw.delegate.CursorForward(n)
+}
+
+// CursorBackward moves the cursor backward by 'n' columns; the default count is 1.
+func (hw *HighlightedWriter) CursorBackward(n int) {
+	hw.delegate.CursorBackward(n)
+}
+
+// AskForCPR asks for a cursor position report (CPR).
+func (hw *HighlightedWriter) AskForCPR() {
+	hw.delegate.AskForCPR()
+}
+
+// SaveCursor saves current cursor position.
+func (hw *HighlightedWriter) SaveCursor() {
+	hw.delegate.SaveCursor()
+}
+
+// UnSaveCursor restores cursor position after a Save Cursor.
+func (hw *HighlightedWriter) UnSaveCursor() {
+	hw.delegate.UnSaveCursor()
+}
+
+// ScrollDown scrolls display down one line.
+func (hw *HighlightedWriter) ScrollDown() {
+	hw.delegate.ScrollDown()
+}
+
+// ScrollUp scroll display up one line.
+func (hw *HighlightedWriter) ScrollUp() {
+	hw.delegate.ScrollUp()
+}
+
+// SetTitle sets a title of terminal window.
+func (hw *HighlightedWriter) SetTitle(title string) {
+	hw.delegate.SetTitle(title)
+}
+
+// ClearTitle clears a title of terminal window.
+func (hw *HighlightedWriter) ClearTitle() {
+	hw.delegate.ClearTitle()
+}
+
+// SetColor sets text and background colors. and specify whether text is bold.
+func (hw *HighlightedWriter) SetColor(fg, bg prompt.Color, bold bool) {
+	// We use unreasonable color settings to "flag" when prompt is about to write input text
+	if fg == prompt.Red && bg == prompt.Red {
+		hw.writingInput = true
+		hw.delegate.SetColor(prompt.DefaultColor, prompt.DefaultColor, bold)
+	} else {
+		hw.writingInput = false
+		hw.delegate.SetColor(fg, bg, bold)
+	}
+}
+
+func completer(d prompt.Document) []prompt.Suggest {
+	partial := shellContext.cmd.String() + d.CurrentLineBeforeCursor()
+	iterator, err := shellContext.lexer.Tokenise(nil, partial)
+	if err != nil {
+		return []prompt.Suggest{}
+	}
+	modified := strings.Builder{}
+	shellContext.formatter.Format(&modified, shellContext.style, iterator)
+	// fmt.Println(modified.String())
+	d.Text = modified.String()
+	//tokens := iterator.Tokens()
+	//lasttoken := tokens[len(tokens)-1]
 	s := []prompt.Suggest{
 		/*
 			{Text: "agenda", Description: "list agenda"},
@@ -298,10 +463,12 @@ func changePrefix() (string, bool) {
 func executor(in string) {
 	shellContext.cmd.WriteString(fmt.Sprintf("%s\n", in))
 	cmdstr := shellContext.cmd.String()
-	iterator, err := shellContext.lexer.Tokenise(nil, cmdstr)
-	if err == nil {
-		err = shellContext.formatter.Format(os.Stdout, shellContext.style, iterator)
-	}
+	/*
+		iterator, err := shellContext.lexer.Tokenise(nil, cmdstr)
+		if err == nil {
+			err = shellContext.formatter.Format(os.Stdout, shellContext.style, iterator)
+		}
+	*/
 	complete, err := shellContext.env.CompleteCommand(cmdstr)
 	if err != nil {
 		os.Stderr.WriteString(fmt.Sprintf("[SHELL]: %s\n", err.Error()))
@@ -367,11 +534,16 @@ func initContext(env *Environment) {
 // Shell sets up an interactive CLIPS shell within the given environment
 func (env *Environment) Shell() {
 	initContext(env)
+
+	writer := &HighlightedWriter{delegate: prompt.NewStandardOutputWriter()}
 	p := prompt.New(
 		executor,
 		completer,
 		prompt.OptionPrefix(primaryPrompt),
+		prompt.OptionWriter(writer),
 		prompt.OptionLivePrefix(changePrefix),
+		prompt.OptionInputTextColor(prompt.Red),
+		prompt.OptionInputBGColor(prompt.Red),
 	)
 	p.Run()
 }
