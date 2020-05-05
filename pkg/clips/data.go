@@ -193,6 +193,8 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 		return MULTIFIELD
 	default:
 		switch reflect.TypeOf(v).String() {
+		case "unsafe.Pointer":
+			return EXTERNAL_ADDRESS
 		case "clips.Symbol":
 			return SYMBOL
 		case "clips.InstanceName":
@@ -203,10 +205,9 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 			return FACT_ADDRESS
 		case "*clips.TemplateFact":
 			return FACT_ADDRESS
+		case "*clips.Instance":
+			return INSTANCE_ADDRESS
 		}
-		/* TODO
-		clips.classes.Instance: clips.common.Type.INSTANCE_ADDRESS,
-		*/
 	}
 	return SYMBOL
 }
@@ -254,10 +255,8 @@ func (do *DataObject) goValue(dtype Type, dvalue unsafe.Pointer) interface{} {
 		return do.multifieldToList()
 	case FACT_ADDRESS:
 		return do.env.newFact(C.to_pointer(dvalue))
-		/* TODO
-		case INSTANCE_ADDRESS:
-			return clips.classes.Instance(self._env, lib.to_pointer(dvalue))
-		*/
+	case INSTANCE_ADDRESS:
+		return createInstance(do.env, C.to_pointer(dvalue))
 	}
 	return nil
 }
@@ -295,7 +294,7 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 		return C.EnvAddDouble(do.env.env, C.double(v))
 	}
 	if v, ok := dvalue.(unsafe.Pointer); ok {
-		return v
+		return C.EnvAddExternalAddress(do.env.env, v, C.C_POINTER_EXTERNAL_ADDRESS)
 	}
 	if v, ok := dvalue.(string); ok {
 		vstr := C.CString(v)
@@ -321,10 +320,9 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	if v, ok := dvalue.(*TemplateFact); ok {
 		return v.factptr
 	}
-	/* TODO
-	if isinstance(dvalue, (clips.classes.Instance)):
-		return dvalue._ist
-	*/
+	if v, ok := dvalue.(*Instance); ok {
+		return v.instptr
+	}
 	return nil
 }
 

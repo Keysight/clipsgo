@@ -3,6 +3,7 @@ package clips
 import (
 	"reflect"
 	"testing"
+	"unsafe"
 
 	"gotest.tools/assert"
 )
@@ -63,17 +64,28 @@ func TestDataFromClips(t *testing.T) {
 		assert.Equal(t, ret, "Hello World!")
 	})
 
-	/*jjj
 	t.Run("External Address Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		ret, err := env.Eval("\"Hello World!\"")
+		callback1 := func(args []interface{}) (interface{}, error) {
+			assert.Equal(t, args[0], unsafe.Pointer(nil))
+			return nil, nil
+		}
+
+		err := env.DefineFunction("test-callback", callback1)
 		assert.NilError(t, err)
-		assert.Equal(t, reflect.TypeOf(ret).Kind(), reflect.String)
-		assert.Equal(t, ret, "Hello World!")
+
+		callback2 := func(args []interface{}) (interface{}, error) {
+			return unsafe.Pointer(nil), nil
+		}
+
+		err = env.DefineFunction("generate-external", callback2)
+		assert.NilError(t, err)
+
+		_, err = env.Eval("(test-callback (generate-external))")
+		assert.NilError(t, err)
 	})
-	*/
 
 	t.Run("Symbol Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
@@ -143,9 +155,25 @@ func TestDataFromClips(t *testing.T) {
 		assert.Equal(t, f.String(), "(foo (bar nil) (baz))")
 	})
 
-	/* TODO
-	INSTANCE
-	*/
+	t.Run("Instance Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER) (slot bar (type INTEGER)) (multislot baz))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(foo of Foo (bar 12))`)
+		defer inst.Drop()
+		assert.NilError(t, err)
+
+		ret, err := env.Eval(`(bind ?ret (instance-address [foo]))`)
+		assert.NilError(t, err)
+		assert.Equal(t, reflect.TypeOf(ret).String(), "*clips.Instance")
+
+		inst, ok := ret.(*Instance)
+		assert.Assert(t, ok)
+		assert.Equal(t, inst.String(), "[foo] of Foo (bar 12) (baz)")
+	})
 }
 
 func TestDataIntoClips(t *testing.T) {
@@ -235,25 +263,21 @@ func TestDataIntoClips(t *testing.T) {
 		assert.Equal(t, ret, "Test String")
 	})
 
-	/* TODO
 	t.Run("External Address Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
 		callback := func(args []interface{}) (interface{}, error) {
-			assert.Equal(t, len(args), 1)
-			assert.Equal(t, args[0], "Test String")
-			return nil, nil
+			return unsafe.Pointer(nil), nil
 		}
 
 		err := env.DefineFunction("test-callback", callback)
 		assert.NilError(t, err)
 
-		ret, err := env.Eval("(test-callback \"Test String\")")
+		ret, err := env.Eval("(test-callback)")
 		assert.NilError(t, err)
-		assert.Equal(t, ret, "")
+		assert.Equal(t, ret, unsafe.Pointer(nil))
 	})
-	*/
 
 	t.Run("Symbol Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
@@ -287,7 +311,7 @@ func TestDataIntoClips(t *testing.T) {
 		assert.Equal(t, ret, InstanceName("testname"))
 	})
 
-	t.Run("MULTIEFIELD Conversion", func(t *testing.T) {
+	t.Run("MULTIFIELD Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -362,7 +386,28 @@ func TestDataIntoClips(t *testing.T) {
 		assert.Equal(t, fact.Index(), 1)
 	})
 
-	/* TODO
-	INSTANCE
-	*/
+	t.Run("Instance Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		callback := func(args []interface{}) (interface{}, error) {
+			return args[0], nil
+		}
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		err = env.Build(`(defclass Foo (is-a USER) (slot bar (type INTEGER)) (multislot baz))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(foo of Foo (bar 12))`)
+		defer inst.Drop()
+		assert.NilError(t, err)
+
+		ret, err := env.Eval("(test-callback (instance-address [foo]))")
+		assert.NilError(t, err)
+
+		inst, ok := ret.(*Instance)
+		assert.Assert(t, ok)
+		assert.Equal(t, inst.String(), "[foo] of Foo (bar 12) (baz)")
+	})
 }
