@@ -2,7 +2,7 @@ package clips
 
 // #cgo CFLAGS: -I ../../clips_source
 // #cgo LDFLAGS: -L ../../clips_source -l clips
-// #include <clips.h>
+// #include <clips/clips.h>
 //
 // struct multifield *multifield_ptr(void *mallocval) {
 // 	 return (struct multifield *)mallocval;

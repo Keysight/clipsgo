@@ -3,7 +3,7 @@ package clips
 // #cgo CFLAGS: -I ../../clips_source
 // #cgo LDFLAGS: -L ../../clips_source -l clips
 // #include <string.h>
-// #include <clips.h>
+// #include <clips/clips.h>
 //
 // char* getNameFromContext(void* env);
 import "C"
