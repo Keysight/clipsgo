@@ -57,10 +57,10 @@ Instances are instantiations of specific classes. They store values by name, sim
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 err := env.Build(`(defclass Foo (is-a USER)
@@ -94,10 +94,10 @@ Ordered Facts represent information as a list of elements. There is no explicit 
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 fact, err := env.AssertString(`(foo a b c)`)
@@ -126,10 +126,10 @@ Unordered facts represent data similar to Go maps. They require a template to be
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 env.Build("(deftemplate foo (slot bar) (multislot baz))")
@@ -158,10 +158,10 @@ It is possible to evaluate CLIPS statements, retrieving their results in Go.
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 ret, err := env.Eval("(create$ foo bar baz)")
@@ -175,10 +175,10 @@ In order to overcome some of the limitations of the CLIPS `eval` command, clipsg
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 // try some stuff that Eval chokes on
@@ -194,10 +194,10 @@ CLIPS constructs must be defined in CLIPS language. Use the `Load()` or `Build()
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 err := env.Build(`(defrule my-rule
@@ -218,10 +218,10 @@ The function defined must have the signature
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 argcount := 0
@@ -244,10 +244,10 @@ All of the Go objects created to interact with the CLIPS environment are simple 
 
 ```go
 import (
-    clipsgo "bitbucket.it.keysight.com/qsr/clipsgo.git"
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
 )
 
-env := clipsgo.CreateEnvironment()
+env := clips.CreateEnvironment()
 defer env.Delete()
 
 templates := env.Templates()
