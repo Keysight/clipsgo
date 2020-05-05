@@ -422,32 +422,21 @@ func (hw *HighlightedWriter) SetColor(fg, bg prompt.Color, bold bool) {
 }
 
 func completer(d prompt.Document) []prompt.Suggest {
-	partial := shellContext.cmd.String() + d.CurrentLineBeforeCursor()
-	iterator, err := shellContext.lexer.Tokenise(nil, partial)
-	if err != nil {
-		return []prompt.Suggest{}
-	}
-	modified := strings.Builder{}
-	shellContext.formatter.Format(&modified, shellContext.style, iterator)
-	// fmt.Println(modified.String())
-	d.Text = modified.String()
-	//tokens := iterator.Tokens()
-	//lasttoken := tokens[len(tokens)-1]
 	s := []prompt.Suggest{
-		/*
-			{Text: "agenda", Description: "list agenda"},
-			{Text: "defclass", Description: "define a class"},
-			{Text: "deffunction", Description: "define a function"},
-			{Text: "defmessage-handler", Description: "define a function"},
-			{Text: "defrule", Description: "define a rule"},
-			{Text: "deftemplate", Description: "define a template fact"},
-			{Text: "facts", Description: "list current facts"},
-			{Text: "instances", Description: "list current instances"},
-			{Text: "matches", Description: "list matches for a rule"},
-			{Text: "watch", Description: "enable watch"},
-			{Text: "unwatch", Description: "disable watch"},
-			{Text: "rules", Description: "disable watch"},
-			{Text: "exit", Description: "exit the shell"},
+		/* Just leave it to syntax highlighting for now
+		{Text: "agenda", Description: "list agenda"},
+		{Text: "defclass", Description: "define a class"},
+		{Text: "deffunction", Description: "define a function"},
+		{Text: "defmessage-handler", Description: "define a function"},
+		{Text: "defrule", Description: "define a rule"},
+		{Text: "deftemplate", Description: "define a template fact"},
+		{Text: "facts", Description: "list current facts"},
+		{Text: "instances", Description: "list current instances"},
+		{Text: "matches", Description: "list matches for a rule"},
+		{Text: "watch", Description: "enable watch"},
+		{Text: "unwatch", Description: "disable watch"},
+		{Text: "rules", Description: "disable watch"},
+		{Text: "exit", Description: "exit the shell"},
 		*/
 	}
 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), false)
