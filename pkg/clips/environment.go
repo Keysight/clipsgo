@@ -148,15 +148,18 @@ func (env *Environment) DefineFunction(name string, callback Callback) error {
 }
 
 // CompleteCommand checks the string to see if it is a complete command yet
-func (env *Environment) CompleteCommand(cmd string) bool {
+func (env *Environment) CompleteCommand(cmd string) (bool, error) {
 	ccmd := C.CString(cmd + "\n")
 	defer C.free(unsafe.Pointer(ccmd))
 
 	ret := int(C.CompleteCommand(ccmd))
 	if ret == 1 {
-		return true
+		return true, nil
 	}
-	return false
+	if ret == -1 {
+		return false, fmt.Errorf(`Invalid command: "%s"`, cmd)
+	}
+	return false, nil
 }
 
 // SendCommand evaluates a command as if it were typed in the CLIPS shell
@@ -172,6 +175,8 @@ func (env *Environment) SendCommand(cmd string) error {
 	C.FlushPPBuffer(env.env)
 	C.SetHaltExecution(env.env, 0)
 	C.SetEvaluationError(env.env, 0)
+	C.CleanCurrentGarbageFrame(env.env, nil)
+	C.CallPeriodicTasks(env.env)
 	if ret == 0 || res != 0 {
 		return EnvError(env, `Unable to execute command "%s"`, cmd)
 	}
