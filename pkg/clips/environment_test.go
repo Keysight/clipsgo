@@ -180,8 +180,12 @@ func TestCreateEnvironment(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		assert.Assert(t, env.CompleteCommand("(deftemplate bar (slot bar))"))
-		assert.Assert(t, !env.CompleteCommand("(deftemplate bar (slot bar)"))
+		complete, err := env.CompleteCommand("(deftemplate bar (slot bar))")
+		assert.NilError(t, err)
+		assert.Assert(t, complete)
+		complete, err = env.CompleteCommand("(deftemplate bar (slot bar)")
+		assert.NilError(t, err)
+		assert.Assert(t, !complete)
 	})
 
 	t.Run("SendCommand", func(t *testing.T) {

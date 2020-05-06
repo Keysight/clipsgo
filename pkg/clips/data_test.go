@@ -346,6 +346,29 @@ func TestDataIntoClips(t *testing.T) {
 		})
 	})
 
+	t.Run("MULTIFIELD Conversion noninterface", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		in := []string{
+			"a",
+			"b",
+		}
+		callback := func(args []interface{}) (interface{}, error) {
+			return in, nil
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		ret, err := env.Eval("(test-callback)")
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, []interface{}{
+			"a",
+			"b",
+		})
+	})
+
 	t.Run("ImpliedFact Conversion", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

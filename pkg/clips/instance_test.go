@@ -357,6 +357,28 @@ func TestInstance(t *testing.T) {
 		assert.ErrorContains(t, err, "Unable")
 	})
 
+	t.Run("SetSlot type violation", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER) (slot bar (type INTEGER)) (multislot baz (type INTEGER)))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (bar 12))`)
+		assert.NilError(t, err)
+
+		ret, err := inst.Slot("bar")
+		assert.NilError(t, err)
+		assert.Equal(t, ret, int64(12))
+
+		err = inst.SetSlot("bar", "forty two")
+		// I would think this should be rejected by CLIPS, but it isn't
+		assert.NilError(t, err)
+
+		err = inst.SetSlot("baz", []string{"forty two"})
+		assert.NilError(t, err)
+	})
+
 	t.Run("Send", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

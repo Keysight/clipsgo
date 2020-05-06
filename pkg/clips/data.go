@@ -315,6 +315,14 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	if v, ok := dvalue.([]interface{}); ok {
 		return do.listToMultifield(v)
 	}
+	if reflect.TypeOf(dvalue).Kind() == reflect.Slice || reflect.TypeOf(dvalue).Kind() == reflect.Array {
+		s := reflect.ValueOf(dvalue)
+		mvalue := make([]interface{}, s.Len())
+		for i := 0; i < s.Len(); i++ {
+			mvalue[i] = s.Index(i).Interface()
+		}
+		return do.listToMultifield(mvalue)
+	}
 	if v, ok := dvalue.(*ImpliedFact); ok {
 		return v.factptr
 	}
