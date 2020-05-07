@@ -194,7 +194,7 @@ func (env *Environment) SendCommand(cmd string) error {
 	// Commands cribbed from the CLIPS shell, and inspired by PyCLIPS
 	C.FlushPPBuffer(env.env)
 	C.SetPPBufferStatus(env.env, 0)
-	ret := C.RouteCommand(env.env, ccmd, 0)
+	ret := C.RouteCommand(env.env, ccmd, 1)
 	res := C.GetEvaluationError(env.env)
 	C.FlushPPBuffer(env.env)
 	C.SetHaltExecution(env.env, 0)
