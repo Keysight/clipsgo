@@ -93,8 +93,24 @@ func convertArg(funcname Symbol, haveType reflect.Type, needType reflect.Type, a
 			}
 			return ret, nil
 		}
+	} else if haveType.Kind() == reflect.Slice && needType.Kind() == reflect.Slice {
+		// see if we can translate to right kind of slice
+		haveArr := reflect.ValueOf(arg)
+		eNeedType := needType.Elem()
+		slice := reflect.MakeSlice(reflect.SliceOf(eNeedType), haveArr.Len(), haveArr.Len())
+		for i := 0; i < haveArr.Len(); i++ {
+			// what we get from CLIPS is always []interface{}, so there's no check for that here
+			val := haveArr.Index(i).Elem()
+			valif, err := convertArg(funcname, val.Type(), eNeedType, val.Interface())
+			if err != nil {
+				return nil, err
+			}
+			//slice.SetLen(i)
+			slice.Index(i).Set(reflect.ValueOf(valif))
+		}
+		return slice.Interface(), nil
 	}
-	return nil, fmt.Errorf(`Invalid type "%s" passed to function "%s", expected "%s"`, haveType.Name(), funcname, needType.Name())
+	return nil, fmt.Errorf(`Invalid type "%v" passed to function "%s", expected "%v"`, haveType, funcname, needType)
 }
 
 //export goFunction

@@ -163,7 +163,7 @@ func TestCallback(t *testing.T) {
 		var called bool
 		callback := func(a int64, b []interface{}, c []interface{}) bool {
 			called = true
-			return a == 7 && len(b) == 2
+			return a == 7 && len(b) == 2 && len(c) == 2
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -175,20 +175,39 @@ func TestCallback(t *testing.T) {
 		assert.Equal(t, ret, true)
 	})
 
-	t.Run("Scale reduction", func(t *testing.T) {
+	t.Run("multifield type conversion", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
 		var called bool
-		callback := func(a int, b float32) bool {
+		callback := func(a int64, b []Symbol, c []int) bool {
 			called = true
-			return a == 7 && b == 15.0
+			return a == 7 && len(b) == 2 && len(c) == 2
 		}
 
 		err := env.DefineFunction("test-callback", callback)
 		assert.NilError(t, err)
 
-		ret, err := env.Eval(`(test-callback 7 15.0)`)
+		ret, err := env.Eval(`(test-callback 7 (create$ a b) (create$ 2 3))`)
+		assert.NilError(t, err)
+		assert.Assert(t, called)
+		assert.Equal(t, ret, true)
+	})
+
+	t.Run("Scale reduction", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		var called bool
+		callback := func(a int, b int32, c int16, d int8, e float32) bool {
+			called = true
+			return a == 7 && b == 7 && c == 7 && d == 7 && e == 15.0
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		ret, err := env.Eval(`(test-callback 7 7 7 7 15.0)`)
 		assert.NilError(t, err)
 		assert.Assert(t, called)
 		assert.Equal(t, ret, true)
@@ -199,16 +218,23 @@ func TestCallback(t *testing.T) {
 		defer env.Delete()
 
 		var called bool
-		callback := func(a int32, b float32) bool {
+		callback := func(a int, b int32, c int16, d int8, e float32) bool {
 			called = true
-			return a == 7 && b == 15.0
+			return a == 7 && b == 7 && c == 7 && d == 7 && e == 15.0
 		}
 
 		err := env.DefineFunction("test-callback", callback)
 		assert.NilError(t, err)
 
-		_, err = env.Eval(`(test-callback 9223372036854775807 15.0)`)
+		_, err = env.Eval(`(test-callback 7 9223372036854775807 7 7 15.0)`)
 		assert.ErrorContains(t, err, "too large")
+
+		_, err = env.Eval(`(test-callback 7 7 9223372036854775807 7 15.0)`)
+		assert.ErrorContains(t, err, "too large")
+
+		_, err = env.Eval(`(test-callback 7 7 7 9223372036854775807 15.0)`)
+		assert.ErrorContains(t, err, "too large")
+
 		assert.Assert(t, !called)
 	})
 
@@ -262,6 +288,24 @@ func TestCallback(t *testing.T) {
 		assert.NilError(t, err)
 
 		_, err = env.Eval(`(test-callback 7 15.0 3)`)
+		assert.ErrorContains(t, err, "Invalid type")
+		assert.Assert(t, !called)
+	})
+
+	t.Run("Bad slice type", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		var called bool
+		callback := func(a []float32) bool {
+			called = true
+			return len(a) == 3
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		_, err = env.Eval(`(test-callback (create$ 7.0 a 3.0))`)
 		assert.ErrorContains(t, err, "Invalid type")
 		assert.Assert(t, !called)
 	})
