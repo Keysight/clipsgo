@@ -14,27 +14,26 @@ package clips
 // {
 //     return EnvDefineFunction(
 //         environment, "go-function", 'u',
-//         PTIEF callGoFunction, "go-function");
+//         PTIEF callGoFunction, "callGoFunction");
 // }
 import "C"
 import (
 	"fmt"
+	"reflect"
 	"runtime"
+	"strings"
 	"unsafe"
 )
 
 const defFunction = `
-(deffunction %[1]s ($?args)
-  (go-function %[1]s (expand$ ?args)))
+(deffunction %[1]s (%[2]s)
+  (go-function %[1]s %[3]s))
 `
-
-// Callback is the signature for functions that will be called from CLIPS
-type Callback func([]interface{}) (interface{}, error)
 
 // Environment stores a CLIPS environment
 type Environment struct {
 	env      unsafe.Pointer
-	callback map[string]Callback
+	callback map[string]reflect.Value
 	router   map[string]Router
 	errRtr   *ErrorRouter
 }
@@ -45,7 +44,7 @@ var environmentObj = make(map[unsafe.Pointer]*Environment)
 func CreateEnvironment() *Environment {
 	ret := &Environment{
 		env:      C.CreateEnvironment(),
-		callback: make(map[string]Callback),
+		callback: make(map[string]reflect.Value),
 		router:   make(map[string]Router),
 	}
 	ret.errRtr = CreateErrorRouter(ret)
@@ -141,10 +140,35 @@ func (env *Environment) Clear() {
 	C.EnvClear(env.env)
 }
 
-// DefineFunction defines a Go function within the CLIPS environment
-func (env *Environment) DefineFunction(name string, callback Callback) error {
-	env.callback[name] = callback
-	return env.Build(fmt.Sprintf(defFunction, name))
+// DefineFunction defines a Go function within the CLIPS environment. If the given name is "", the name of the go funciton will be used
+func (env *Environment) DefineFunction(name string, callback interface{}) error {
+	val := reflect.ValueOf(callback)
+	if val.Kind() != reflect.Func {
+		return fmt.Errorf(`Invalid function pointer %v"`, callback)
+	}
+	if name == "" {
+		name = runtime.FuncForPC(val.Pointer()).Name()
+	}
+	typ := val.Type()
+	fixedArgs := typ.NumIn()
+	argslist := make([]string, fixedArgs)
+	for i := 0; i < fixedArgs; i++ {
+		argslist[i] = fmt.Sprintf("?arg%d", i)
+	}
+	var usage string
+	var declaration string
+	if !typ.IsVariadic() {
+		usage = strings.Join(argslist, " ")
+		declaration = strings.Join(argslist, " ")
+	} else {
+		fixedArgs--
+		argslist[fixedArgs] = fmt.Sprintf("$?arg%d", fixedArgs)
+		declaration = strings.Join(argslist, " ")
+		argslist[fixedArgs] = fmt.Sprintf("(expand$ ?arg%d)", fixedArgs)
+		usage = strings.Join(argslist, " ")
+	}
+	env.callback[name] = val
+	return env.Build(fmt.Sprintf(defFunction, name, declaration, usage))
 }
 
 // CompleteCommand checks the string to see if it is a complete command yet

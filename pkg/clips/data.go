@@ -332,7 +332,10 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	if v, ok := dvalue.(*Instance); ok {
 		return v.instptr
 	}
-	return nil
+	// Fall back to FALSE in typical CLIPS style
+	vstr := C.CString("FALSE")
+	defer C.free(unsafe.Pointer(vstr))
+	return C.EnvAddSymbol(do.env.env, vstr)
 }
 
 func (do *DataObject) multifieldToList() []interface{} {

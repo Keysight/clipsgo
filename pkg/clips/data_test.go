@@ -40,8 +40,7 @@ func TestDataFromClips(t *testing.T) {
 
 		ret, err := env.Eval("12.0")
 		assert.NilError(t, err)
-		assert.Equal(t, reflect.TypeOf(ret).Kind(), reflect.Float64)
-		assert.Equal(t, ret, 12.0)
+		assert.Equal(t, ret, float64(12.0))
 	})
 
 	t.Run("Integer Conversion", func(t *testing.T) {
@@ -68,16 +67,16 @@ func TestDataFromClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback1 := func(args []interface{}) (interface{}, error) {
-			assert.Equal(t, args[0], unsafe.Pointer(nil))
-			return nil, nil
+		var successful bool
+		callback1 := func(arg unsafe.Pointer) {
+			successful = arg == unsafe.Pointer(nil)
 		}
 
 		err := env.DefineFunction("test-callback", callback1)
 		assert.NilError(t, err)
 
-		callback2 := func(args []interface{}) (interface{}, error) {
-			return unsafe.Pointer(nil), nil
+		callback2 := func() unsafe.Pointer {
+			return unsafe.Pointer(nil)
 		}
 
 		err = env.DefineFunction("generate-external", callback2)
@@ -85,6 +84,7 @@ func TestDataFromClips(t *testing.T) {
 
 		_, err = env.Eval("(test-callback (generate-external))")
 		assert.NilError(t, err)
+		assert.Assert(t, successful)
 	})
 
 	t.Run("Symbol Conversion", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestDataFromClips(t *testing.T) {
 		assert.Equal(t, val[0], Symbol("a"))
 		assert.Equal(t, val[1], Symbol("b"))
 		assert.Equal(t, val[2], "c")
-		assert.Equal(t, val[3], float64(1.0))
+		assert.Equal(t, val[3], 1.0)
 		assert.Equal(t, val[4], int64(2))
 		assert.Equal(t, val[5], int64(3))
 	})
@@ -181,8 +181,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return nil, nil
+		callback := func() interface{} {
+			return nil
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -198,8 +198,8 @@ func TestDataIntoClips(t *testing.T) {
 		defer env.Delete()
 
 		ret := true
-		callback := func(args []interface{}) (interface{}, error) {
-			return ret, nil
+		callback := func() bool {
+			return ret
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -219,8 +219,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return 1.7E12, nil
+		callback := func() interface{} {
+			return 1.7E12
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -235,8 +235,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return 112, nil
+		callback := func() interface{} {
+			return 112
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -251,8 +251,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return "Test String", nil
+		callback := func() interface{} {
+			return "Test String"
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -267,8 +267,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return unsafe.Pointer(nil), nil
+		callback := func() interface{} {
+			return unsafe.Pointer(nil)
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -283,8 +283,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return Symbol("TestSymbol"), nil
+		callback := func() interface{} {
+			return Symbol("TestSymbol")
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -299,8 +299,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return InstanceName("testname"), nil
+		callback := func() interface{} {
+			return InstanceName("testname")
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -325,8 +325,8 @@ func TestDataIntoClips(t *testing.T) {
 			float64(1.7E12),
 			InstanceName("gen7"),
 		}
-		callback := func(args []interface{}) (interface{}, error) {
-			return in, nil
+		callback := func() interface{} {
+			return in
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -354,8 +354,8 @@ func TestDataIntoClips(t *testing.T) {
 			"a",
 			"b",
 		}
-		callback := func(args []interface{}) (interface{}, error) {
-			return in, nil
+		callback := func() interface{} {
+			return in
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -373,8 +373,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return args[0], nil
+		callback := func(arg interface{}) interface{} {
+			return arg
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -392,8 +392,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return args[0], nil
+		callback := func(arg interface{}) interface{} {
+			return arg
 		}
 
 		err := env.DefineFunction("test-callback", callback)
@@ -413,8 +413,8 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(args []interface{}) (interface{}, error) {
-			return args[0], nil
+		callback := func(arg interface{}) interface{} {
+			return arg
 		}
 		err := env.DefineFunction("test-callback", callback)
 		assert.NilError(t, err)

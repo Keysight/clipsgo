@@ -37,7 +37,7 @@ func EnvError(env *Environment, msg string, args ...interface{}) *Error {
 	codeend := strings.Index(shellmsg, "]")
 	code := "Error"
 	if codestart >= 0 && codeend >= 0 {
-		code = shellmsg[codestart+1 : codeend-codestart]
+		code = shellmsg[codestart+1 : codeend]
 	}
 	msg = fmt.Sprintf(msg, args...)
 	msg = fmt.Sprintf("%s: %s", msg, shellmsg)

@@ -212,9 +212,13 @@ assert.NilError(t, err)
 
 The `DefineFunction()` method allows binding a Go function within the CLIPS environment. It will be callable from within CLIPS using the given name as though it had been defined with the `deffunction` construct.
 
-The function defined must have the signature
+Clipsgo will attempt to marshall functions passed from CLIPS to the correct types to match the function. If it cannot, CLIPS will error on the attempted function call.
 
-`func(args []interface{}) (interface{}, error)`
+Each argument must be one of types listed as equivalent to one of the CLIPS data types, with one notable exception - it is acceptable to use lower-scale types like int, int8, or float32. Clipsgo will automatically convert, or will return an error if the number is too large for the conversion.
+
+Any number of return values is supported. If the last return value of the funciton is an error type, clipsgo will interpret it as an error and not include it in the function return values. A single non-error value will be returned directly, more than that will return a multifield.
+
+Variadic functions are also supported.
 
 ```go
 import (
@@ -224,18 +228,17 @@ import (
 env := clips.CreateEnvironment()
 defer env.Delete()
 
-argcount := 0
-callback := func(args []interface{}) (interface{}, error) {
-    argcount = len(args)
-    return nil, nil
+callback := func(foo int, bar float64,
+                multifield []interface{},
+                vals ...clips.Symbol) (bool, error)
+    return true, nil
 }
 
 err := env.DefineFunction("test-callback", callback)
 assert.NilError(t, err)
 
-_, err = env.Eval("(test-callback a b c)")
+_, err = env.Eval("(test-callback 1 17.0 (create$ a b c) a b c d e f)")
 assert.NilError(t, err)
-assert.Equal(t, argcount, 3)
 ```
 
 ## Go Reference Objects Lifecycle

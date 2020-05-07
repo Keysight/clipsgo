@@ -163,15 +163,14 @@ func TestCreateEnvironment(t *testing.T) {
 		defer env.Delete()
 
 		argcount := 0
-		callback := func(args []interface{}) (interface{}, error) {
+		callback := func(args []interface{}) {
 			argcount = len(args)
-			return nil, nil
 		}
 
 		err := env.DefineFunction("test-callback", callback)
 		assert.NilError(t, err)
 
-		_, err = env.Eval("(test-callback a b c)")
+		_, err = env.Eval("(test-callback (create$ a b c))")
 		assert.NilError(t, err)
 		assert.Equal(t, argcount, 3)
 	})
