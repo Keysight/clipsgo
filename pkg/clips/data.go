@@ -104,6 +104,7 @@ package clips
 // }
 import "C"
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"unsafe"
@@ -152,12 +153,6 @@ func (do *DataObject) Delete() {
 func (do *DataObject) byRef() *C.struct_dataObject {
 	return do.data
 }
-
-/*
-func (do *DataObject) byVal() {
-	return
-}
-*/
 
 // Value returns the Go value for this data object
 func (do *DataObject) Value() interface{} {
@@ -363,4 +358,136 @@ func (do *DataObject) listToMultifield(values []interface{}) unsafe.Pointer {
 	C.set_data_begin(do.data, 1)
 	C.set_data_end(do.data, size)
 	return ret
+}
+
+// ExtractValue attempts to put the represented data value into the item provided by the user.
+func (do *DataObject) ExtractValue(retval interface{}) error {
+	directType := reflect.TypeOf(retval)
+	if directType.Kind() != reflect.Ptr {
+		return fmt.Errorf("retval must be a pointer to the value to be filled in")
+	}
+	val := do.Value()
+	converted, err := convertArg(reflect.TypeOf(val), directType.Elem(), val)
+	if err != nil {
+		return err
+	}
+	userdata := reflect.ValueOf(retval).Elem()
+	if converted == nil {
+		userdata.Set(reflect.Zero(userdata.Type()))
+	} else {
+		userdata.Set(reflect.ValueOf(converted))
+	}
+	return nil
+}
+
+// MustExtractValue attempts to put the represented data value into the item provided by the user, and panics if it can't
+func (do *DataObject) MustExtractValue(retval interface{}) {
+	if err := do.ExtractValue(retval); err != nil {
+		panic(err)
+	}
+}
+
+func convertArg(haveType reflect.Type, needType reflect.Type, arg interface{}) (interface{}, error) {
+	if haveType == nil {
+		if needType == nil {
+			return nil, nil
+		}
+		switch needType.Kind() {
+		case reflect.Interface, reflect.Ptr:
+			return nil, nil
+		}
+		return nil, fmt.Errorf("Unable to convert nil value")
+	}
+	if haveType.AssignableTo(needType) {
+		return arg, nil
+	}
+	if haveType.Kind() == reflect.Int64 {
+		// Make an exception when it's just loss of scale, and make it work
+		intval := arg.(int64)
+		switch needType.Kind() {
+		case reflect.Int:
+			ret := int(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Int32:
+			ret := int32(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Int16:
+			ret := int16(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Int8:
+			ret := int8(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Uint:
+			ret := uint(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Uint64:
+			ret := uint64(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Uint32:
+			ret := uint32(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Uint16:
+			ret := uint16(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		case reflect.Uint8:
+			ret := uint8(intval)
+			if int64(ret) != intval {
+				return nil, fmt.Errorf(`Integer %d too large`, intval)
+			}
+			return ret, nil
+		}
+	} else if haveType.Kind() == reflect.Float64 {
+		floatval := arg.(float64)
+		if needType.Kind() == reflect.Float32 {
+			ret := float32(floatval)
+			if float64(ret) != floatval {
+				return nil, fmt.Errorf(`Floating point %f too precise to represent`, floatval)
+			}
+			return ret, nil
+		}
+	} else if haveType.Kind() == reflect.Slice && needType.Kind() == reflect.Slice {
+		// see if we can translate to right kind of slice
+		haveArr := reflect.ValueOf(arg)
+		eNeedType := needType.Elem()
+		slice := reflect.MakeSlice(reflect.SliceOf(eNeedType), haveArr.Len(), haveArr.Len())
+		for i := 0; i < haveArr.Len(); i++ {
+			// what we get from CLIPS is always []interface{}, so there's no check for that here
+			val := haveArr.Index(i).Elem()
+			valif, err := convertArg(val.Type(), eNeedType, val.Interface())
+			if err != nil {
+				return nil, err
+			}
+			//slice.SetLen(i)
+			slice.Index(i).Set(reflect.ValueOf(valif))
+		}
+		return slice.Interface(), nil
+	} else if haveType.ConvertibleTo(needType) {
+		// This could actually handle ints and floats, too, except it hides wraparound and loss of precision
+		return reflect.ValueOf(arg).Convert(needType).Interface(), nil
+	}
+	return nil, fmt.Errorf(`Invalid type "%v", expected "%v"`, haveType, needType)
 }

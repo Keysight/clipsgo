@@ -122,12 +122,28 @@ func (env *Environment) Eval(construct string) (interface{}, error) {
 	defer C.free(unsafe.Pointer(cconstruct))
 
 	data := createDataObject(env)
+	defer data.Delete()
 	errint := int(C.EnvEval(env.env, cconstruct, data.byRef()))
 
 	if errint != 1 {
 		return nil, EnvError(env, "Unable to parse construct \"%s\"", construct)
 	}
 	return data.Value(), nil
+}
+
+// ExtractEval evaluates an expression, storing its return value into the object passed by the user
+func (env *Environment) ExtractEval(retval interface{}, construct string) error {
+	cconstruct := C.CString(construct)
+	defer C.free(unsafe.Pointer(cconstruct))
+
+	data := createDataObject(env)
+	defer data.Delete()
+	errint := int(C.EnvEval(env.env, cconstruct, data.byRef()))
+
+	if errint != 1 {
+		return EnvError(env, "Unable to parse construct \"%s\"", construct)
+	}
+	return data.ExtractValue(retval)
 }
 
 // Reset resets the CLIPS environment

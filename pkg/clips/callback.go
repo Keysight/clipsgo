@@ -21,98 +21,6 @@ func printError(env *Environment, err string) {
 	C.SetEvaluationError(env.env, 1)
 }
 
-func convertArg(funcname Symbol, haveType reflect.Type, needType reflect.Type, arg interface{}) (interface{}, error) {
-	if haveType.AssignableTo(needType) {
-		return arg, nil
-	}
-	if haveType.Kind() == reflect.Int64 {
-		// Make an exception when it's just loss of scale, and make it work
-		intval := arg.(int64)
-		switch needType.Kind() {
-		case reflect.Int:
-			ret := int(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Int32:
-			ret := int32(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Int16:
-			ret := int16(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Int8:
-			ret := int8(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Uint:
-			ret := uint(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Uint64:
-			ret := uint64(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Uint32:
-			ret := uint32(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Uint16:
-			ret := uint16(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		case reflect.Uint8:
-			ret := uint8(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large calling function "%s"`, intval, funcname)
-			}
-			return ret, nil
-		}
-	} else if haveType.Kind() == reflect.Float64 {
-		floatval := arg.(float64)
-		if needType.Kind() == reflect.Float32 {
-			ret := float32(floatval)
-			if float64(ret) != floatval {
-				return nil, fmt.Errorf(`Floating point %f too precise calling function "%s"`, floatval, funcname)
-			}
-			return ret, nil
-		}
-	} else if haveType.Kind() == reflect.Slice && needType.Kind() == reflect.Slice {
-		// see if we can translate to right kind of slice
-		haveArr := reflect.ValueOf(arg)
-		eNeedType := needType.Elem()
-		slice := reflect.MakeSlice(reflect.SliceOf(eNeedType), haveArr.Len(), haveArr.Len())
-		for i := 0; i < haveArr.Len(); i++ {
-			// what we get from CLIPS is always []interface{}, so there's no check for that here
-			val := haveArr.Index(i).Elem()
-			valif, err := convertArg(funcname, val.Type(), eNeedType, val.Interface())
-			if err != nil {
-				return nil, err
-			}
-			//slice.SetLen(i)
-			slice.Index(i).Set(reflect.ValueOf(valif))
-		}
-		return slice.Interface(), nil
-	}
-	return nil, fmt.Errorf(`Invalid type "%v" passed to function "%s", expected "%v"`, haveType, funcname, needType)
-}
-
 //export goFunction
 func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 	env, ok := environmentObj[envptr]
@@ -177,9 +85,9 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 		}
 		arg := temp.Value()
 		haveType := reflect.TypeOf(arg)
-		arg, err := convertArg(funcname, haveType, needType, arg)
+		arg, err := convertArg(haveType, needType, arg)
 		if err != nil {
-			printError(env, err.Error())
+			printError(env, fmt.Sprintf("error calling function %s: %v", funcname, err.Error()))
 			return
 		}
 		arguments = append(arguments, reflect.ValueOf(arg))
