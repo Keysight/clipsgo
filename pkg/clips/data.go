@@ -170,39 +170,27 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 	if v == nil {
 		return SYMBOL
 	}
-	switch reflect.TypeOf(v).Kind() {
-	case reflect.Bool:
+	switch v.(type) {
+	case bool, Symbol:
 		return SYMBOL
-	case reflect.Int:
+	case int, int8, int16, int32, int64:
 		return INTEGER
-	case reflect.Int32:
-		return INTEGER
-	case reflect.Int64:
-		return INTEGER
-	case reflect.Float32:
+	case float32, float64:
 		return FLOAT
-	case reflect.Float64:
-		return FLOAT
-	case reflect.Array:
-		return MULTIFIELD
-	case reflect.Slice:
-		return MULTIFIELD
+	case unsafe.Pointer:
+		return EXTERNAL_ADDRESS
+	case InstanceName:
+		return INSTANCE_NAME
+	case string:
+		return STRING
+	case *ImpliedFact, *TemplateFact:
+		return FACT_ADDRESS
+	case *Instance:
+		return INSTANCE_ADDRESS
 	default:
-		switch reflect.TypeOf(v).String() {
-		case "unsafe.Pointer":
-			return EXTERNAL_ADDRESS
-		case "clips.Symbol":
-			return SYMBOL
-		case "clips.InstanceName":
-			return INSTANCE_NAME
-		case "string":
-			return STRING
-		case "*clips.ImpliedFact":
-			return FACT_ADDRESS
-		case "*clips.TemplateFact":
-			return FACT_ADDRESS
-		case "*clips.Instance":
-			return INSTANCE_ADDRESS
+		switch reflect.TypeOf(v).Kind() {
+		case reflect.Array, reflect.Slice:
+			return MULTIFIELD
 		}
 	}
 	return SYMBOL
@@ -264,7 +252,8 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
 	}
-	if v, ok := dvalue.(bool); ok {
+	switch v := dvalue.(type) {
+	case bool:
 		if v {
 			vstr := C.CString("TRUE")
 			defer C.free(unsafe.Pointer(vstr))
@@ -273,42 +262,42 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 		vstr := C.CString("FALSE")
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
-	}
-	if v, ok := dvalue.(int); ok {
+	case int:
 		return C.EnvAddLong(do.env.env, C.longlong(v))
-	}
-	if v, ok := dvalue.(int32); ok {
+	case int8:
 		return C.EnvAddLong(do.env.env, C.longlong(v))
-	}
-	if v, ok := dvalue.(int64); ok {
+	case int16:
 		return C.EnvAddLong(do.env.env, C.longlong(v))
-	}
-	if v, ok := dvalue.(float32); ok {
+	case int32:
+		return C.EnvAddLong(do.env.env, C.longlong(v))
+	case int64:
+		return C.EnvAddLong(do.env.env, C.longlong(v))
+	case float32:
 		return C.EnvAddDouble(do.env.env, C.double(v))
-	}
-	if v, ok := dvalue.(float64); ok {
+	case float64:
 		return C.EnvAddDouble(do.env.env, C.double(v))
-	}
-	if v, ok := dvalue.(unsafe.Pointer); ok {
+	case unsafe.Pointer:
 		return C.EnvAddExternalAddress(do.env.env, v, C.C_POINTER_EXTERNAL_ADDRESS)
-	}
-	if v, ok := dvalue.(string); ok {
+	case string:
 		vstr := C.CString(v)
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
-	}
-	if v, ok := dvalue.(Symbol); ok {
+	case Symbol:
 		vstr := C.CString(string(v))
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
-	}
-	if v, ok := dvalue.(InstanceName); ok {
+	case InstanceName:
 		vstr := C.CString(string(v))
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
-	}
-	if v, ok := dvalue.([]interface{}); ok {
+	case []interface{}:
 		return do.listToMultifield(v)
+	case *ImpliedFact:
+		return v.factptr
+	case *TemplateFact:
+		return v.factptr
+	case *Instance:
+		return v.instptr
 	}
 	if reflect.TypeOf(dvalue).Kind() == reflect.Slice || reflect.TypeOf(dvalue).Kind() == reflect.Array {
 		s := reflect.ValueOf(dvalue)
@@ -317,15 +306,6 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 			mvalue[i] = s.Index(i).Interface()
 		}
 		return do.listToMultifield(mvalue)
-	}
-	if v, ok := dvalue.(*ImpliedFact); ok {
-		return v.factptr
-	}
-	if v, ok := dvalue.(*TemplateFact); ok {
-		return v.factptr
-	}
-	if v, ok := dvalue.(*Instance); ok {
-		return v.instptr
 	}
 	// Fall back to FALSE in typical CLIPS style
 	vstr := C.CString("FALSE")
@@ -404,58 +384,39 @@ func convertArg(haveType reflect.Type, needType reflect.Type, arg interface{}) (
 	if haveType.Kind() == reflect.Int64 {
 		// Make an exception when it's just loss of scale, and make it work
 		intval := arg.(int64)
+		var ret interface{}
+		var checkval int64
 		switch needType.Kind() {
 		case reflect.Int:
-			ret := int(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = int(intval)
+			checkval = int64(int(intval))
 		case reflect.Int32:
-			ret := int32(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = int32(intval)
+			checkval = int64(int32(intval))
 		case reflect.Int16:
-			ret := int16(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = int16(intval)
+			checkval = int64(int16(intval))
 		case reflect.Int8:
-			ret := int8(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = int8(intval)
+			checkval = int64(int8(intval))
 		case reflect.Uint:
-			ret := uint(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = uint(intval)
+			checkval = int64(uint(intval))
 		case reflect.Uint64:
-			ret := uint64(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = uint64(intval)
+			checkval = int64(uint64(intval))
 		case reflect.Uint32:
-			ret := uint32(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = uint32(intval)
+			checkval = int64(uint32(intval))
 		case reflect.Uint16:
-			ret := uint16(intval)
-			if int64(ret) != intval {
-				return nil, fmt.Errorf(`Integer %d too large`, intval)
-			}
-			return ret, nil
+			ret = uint16(intval)
+			checkval = int64(uint16(intval))
 		case reflect.Uint8:
-			ret := uint8(intval)
-			if int64(ret) != intval {
+			ret = uint8(intval)
+			checkval = int64(uint8(intval))
+		}
+		if ret != nil {
+			if checkval != intval {
 				return nil, fmt.Errorf(`Integer %d too large`, intval)
 			}
 			return ret, nil
