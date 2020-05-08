@@ -38,7 +38,7 @@ func (env *Environment) Instances() []*Instance {
 }
 
 // FindInstance returns the instance of the given name. module may be the empty string to use the current module
-func (env *Environment) FindInstance(name string, module string) (*Instance, error) {
+func (env *Environment) FindInstance(name InstanceName, module string) (*Instance, error) {
 	var modptr unsafe.Pointer
 	if module != "" {
 		cmod := C.CString(module)
@@ -48,7 +48,7 @@ func (env *Environment) FindInstance(name string, module string) (*Instance, err
 			return nil, fmt.Errorf(`Module "%s" not found`, module)
 		}
 	}
-	cname := C.CString(name)
+	cname := C.CString(string(name))
 	defer C.free(unsafe.Pointer(cname))
 	instptr := C.EnvFindInstance(env.env, modptr, cname, 1)
 	if instptr == nil {
@@ -169,9 +169,9 @@ func (inst *Instance) String() string {
 }
 
 // Name returns the name of this instance
-func (inst *Instance) Name() string {
+func (inst *Instance) Name() InstanceName {
 	ret := C.EnvGetInstanceName(inst.env.env, inst.instptr)
-	return C.GoString(ret)
+	return InstanceName(C.GoString(ret))
 }
 
 // Class returns a reference to the class of this instance

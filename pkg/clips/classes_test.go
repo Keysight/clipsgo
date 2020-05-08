@@ -145,7 +145,7 @@ func TestClass(t *testing.T) {
 
 		inst, err := class.NewInstance("named")
 		assert.NilError(t, err)
-		assert.Equal(t, inst.Name(), "named")
+		assert.Equal(t, inst.Name(), InstanceName("named"))
 	})
 
 	t.Run("MessageHandlers", func(t *testing.T) {
@@ -255,8 +255,8 @@ func TestClass(t *testing.T) {
 
 		insts := Foo.Instances()
 		assert.Equal(t, len(insts), 2)
-		assert.Equal(t, insts[0].Name(), "gen1")
-		assert.Equal(t, insts[1].Name(), "gen2")
+		assert.Equal(t, insts[0].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen2"))
 	})
 
 	t.Run("sub / super classes", func(t *testing.T) {

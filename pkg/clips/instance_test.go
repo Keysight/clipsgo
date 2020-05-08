@@ -41,9 +41,9 @@ func TestInstanceEnv(t *testing.T) {
 		insts := env.Instances()
 		assert.Assert(t, insts != nil)
 		assert.Equal(t, len(insts), 3)
-		assert.Equal(t, insts[0].Name(), "initial-object")
-		assert.Equal(t, insts[1].Name(), "gen1")
-		assert.Equal(t, insts[2].Name(), "named")
+		assert.Equal(t, insts[0].Name(), InstanceName("initial-object"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[2].Name(), InstanceName("named"))
 	})
 
 	t.Run("Find instance", func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestInstanceEnv(t *testing.T) {
 		assert.NilError(t, err)
 
 		inst, err := env.FindInstance("named", "")
-		assert.Equal(t, inst.Name(), "named")
+		assert.Equal(t, inst.Name(), InstanceName("named"))
 
 		_, err = env.FindInstance("foo", "")
 		assert.ErrorContains(t, err, "not found")
@@ -131,9 +131,9 @@ func TestInstanceEnv(t *testing.T) {
 		insts := env.Instances()
 		assert.Assert(t, insts != nil)
 		assert.Equal(t, len(insts), 3)
-		assert.Equal(t, insts[0].Name(), "initial-object")
-		assert.Equal(t, insts[1].Name(), "gen1")
-		assert.Equal(t, insts[2].Name(), "named")
+		assert.Equal(t, insts[0].Name(), InstanceName("initial-object"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[2].Name(), InstanceName("named"))
 	})
 
 	t.Run("Load instances binary", func(t *testing.T) {
@@ -149,9 +149,9 @@ func TestInstanceEnv(t *testing.T) {
 		insts := env.Instances()
 		assert.Assert(t, insts != nil)
 		assert.Equal(t, len(insts), 3)
-		assert.Equal(t, insts[0].Name(), "initial-object")
-		assert.Equal(t, insts[1].Name(), "gen1")
-		assert.Equal(t, insts[2].Name(), "named")
+		assert.Equal(t, insts[0].Name(), InstanceName("initial-object"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[2].Name(), InstanceName("named"))
 	})
 
 	t.Run("Load instances string", func(t *testing.T) {
@@ -177,9 +177,9 @@ func TestInstanceEnv(t *testing.T) {
 		insts := env.Instances()
 		assert.Assert(t, insts != nil)
 		assert.Equal(t, len(insts), 3)
-		assert.Equal(t, insts[0].Name(), "initial-object")
-		assert.Equal(t, insts[1].Name(), "gen1")
-		assert.Equal(t, insts[2].Name(), "named")
+		assert.Equal(t, insts[0].Name(), InstanceName("initial-object"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[2].Name(), InstanceName("named"))
 	})
 
 	t.Run("Restore instances", func(t *testing.T) {
@@ -195,9 +195,9 @@ func TestInstanceEnv(t *testing.T) {
 		insts := env.Instances()
 		assert.Assert(t, insts != nil)
 		assert.Equal(t, len(insts), 3)
-		assert.Equal(t, insts[0].Name(), "initial-object")
-		assert.Equal(t, insts[1].Name(), "gen1")
-		assert.Equal(t, insts[2].Name(), "named")
+		assert.Equal(t, insts[0].Name(), InstanceName("initial-object"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[2].Name(), InstanceName("named"))
 	})
 
 	t.Run("Restore instances string", func(t *testing.T) {
@@ -223,9 +223,9 @@ func TestInstanceEnv(t *testing.T) {
 		insts := env.Instances()
 		assert.Assert(t, insts != nil)
 		assert.Equal(t, len(insts), 3)
-		assert.Equal(t, insts[0].Name(), "initial-object")
-		assert.Equal(t, insts[1].Name(), "gen1")
-		assert.Equal(t, insts[2].Name(), "named")
+		assert.Equal(t, insts[0].Name(), InstanceName("initial-object"))
+		assert.Equal(t, insts[1].Name(), InstanceName("gen1"))
+		assert.Equal(t, insts[2].Name(), InstanceName("named"))
 	})
 
 	t.Run("Make instance", func(t *testing.T) {
@@ -238,7 +238,7 @@ func TestInstanceEnv(t *testing.T) {
 		inst, err := env.MakeInstance(`(of Foo (bar 12))`)
 		defer inst.Drop()
 		assert.NilError(t, err)
-		assert.Equal(t, inst.Name(), "gen1")
+		assert.Equal(t, inst.Name(), InstanceName("gen1"))
 
 		/* CLIPS actually doesn't error on this
 		_, err = env.MakeInstance(`(of Foo (bar "testing"))`)
@@ -257,7 +257,7 @@ func TestInstance(t *testing.T) {
 
 		inst, err := env.MakeInstance(`(of Foo (bar 12))`)
 		assert.NilError(t, err)
-		assert.Equal(t, inst.Name(), "gen1")
+		assert.Equal(t, inst.Name(), InstanceName("gen1"))
 		assert.Equal(t, inst.String(), "[gen1] of Foo (bar 12)")
 	})
 
