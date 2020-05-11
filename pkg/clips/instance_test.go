@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/udhos/equalfile"
 	"gotest.tools/assert"
 )
@@ -429,5 +430,351 @@ func TestInstance(t *testing.T) {
 
 		err = inst.Unmake()
 		assert.NilError(t, err)
+	})
+}
+
+func TestExtract(t *testing.T) {
+	t.Run("cant extract", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot int (type INTEGER))
+			(slot float (type FLOAT))
+			(slot sym (type SYMBOL))
+			(multislot ms))
+		`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (int 12) (float 28.0) (sym bar) (ms a b c))`)
+		assert.NilError(t, err)
+
+		var retval int
+		err = inst.Extract(retval)
+		assert.ErrorContains(t, err, "non-pointer")
+		err = inst.Extract(nil)
+		assert.ErrorContains(t, err, "non-pointer")
+		var mapval map[interface{}]interface{}
+		err = inst.Extract(&mapval)
+		assert.ErrorContains(t, err, "must be type string")
+	})
+
+	t.Run("Flat to map", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot int (type INTEGER))
+			(slot float (type FLOAT))
+			(slot sym (type SYMBOL))
+			(multislot ms))
+		`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (int 12) (float 28.0) (sym bar) (ms a b c))`)
+		assert.NilError(t, err)
+
+		output := map[string]interface{}{
+			"int":   int64(12),
+			"float": 28.0,
+			"sym":   Symbol("bar"),
+			"ms": []interface{}{
+				Symbol("a"),
+				Symbol("b"),
+				Symbol("c"),
+			},
+		}
+
+		// starting from nil
+		var retval map[string]interface{}
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output)
+
+		// populating an existing map
+		retval = make(map[string]interface{})
+		retval2 := retval
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval2, output)
+	})
+
+	t.Run("Restrictive type map", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot str (type STRING))
+			(slot sym (type SYMBOL))
+		)`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (str "foo") (sym bar))`)
+		assert.NilError(t, err)
+
+		output := map[string]string{
+			"str": "foo",
+			"sym": "bar",
+		}
+
+		// starting from nil
+		var retval map[string]string
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output)
+
+		// populating an existing map
+		retval = make(map[string]string)
+		retval2 := retval
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval2, output)
+	})
+
+	t.Run("Restrictive type map - cant", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot str (type STRING))
+			(slot sym (type SYMBOL))
+			(multislot ms (type SYMBOL))
+		)`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (str "foo") (sym bar))`)
+		assert.NilError(t, err)
+
+		// starting from nil
+		var retval map[string]string
+		err = inst.Extract(&retval)
+		assert.ErrorContains(t, err, "Invalid type")
+	})
+
+	t.Run("Nested to map", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot sym (type SYMBOL))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		err = env.Build(`(defclass Bar (is-a USER)
+			(slot foo (type INSTANCE-ADDRESS) (allowed-classes Foo))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(fooinst of Foo (sym bar) (ms a b c))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(barinst of Bar)`)
+		assert.NilError(t, err)
+
+		_, err = env.Eval(`(send [barinst] put-foo (instance-address [fooinst]))`)
+		assert.NilError(t, err)
+
+		output := map[string]interface{}{
+			"foo": map[string]interface{}{
+				"sym": Symbol("bar"),
+				"ms": []interface{}{
+					Symbol("a"),
+					Symbol("b"),
+					Symbol("c"),
+				},
+			},
+			"ms": []interface{}{},
+		}
+
+		// starting from nil
+		var retval map[string]interface{}
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output)
+
+		// populating an existing map
+		retval = make(map[string]interface{})
+		retval2 := retval
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval2, output)
+	})
+
+	t.Run("Flat to struct", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot Int (type INTEGER))
+			(slot Float (type FLOAT))
+			(slot Sym (type SYMBOL))
+			(multislot MS))
+		`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (Int 12) (Float 28.0) (Sym bar) (MS a b c))`)
+		assert.NilError(t, err)
+
+		type Foo struct {
+			private   int
+			IntVal    int     `json:"Int"`
+			FloatVal  float64 `clips:"Float"`
+			Sym       Symbol
+			MultiSlot []interface{} `json:"MS,omitempty"`
+		}
+
+		output := Foo{
+			IntVal:   12,
+			FloatVal: 28.0,
+			Sym:      Symbol("bar"),
+			MultiSlot: []interface{}{
+				Symbol("a"),
+				Symbol("b"),
+				Symbol("c"),
+			},
+		}
+
+		// in-place
+		var retval Foo
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output, cmpopts.IgnoreUnexported(output))
+	})
+
+	t.Run("Nested to struct", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot Int (type INTEGER))
+			(slot Float (type FLOAT))
+			(slot Sym (type SYMBOL))
+			(multislot MS))
+		`)
+		assert.NilError(t, err)
+
+		err = env.Build(`(defclass Bar (is-a USER)
+			(slot foo (type INSTANCE-ADDRESS) (allowed-classes Foo))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(fooinst of Foo (Int 12) (Float 28.0) (Sym bar) (MS a b c))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(barinst of Bar)`)
+		assert.NilError(t, err)
+
+		_, err = env.Eval(`(send [barinst] put-foo (instance-address [fooinst]))`)
+		assert.NilError(t, err)
+
+		type Foo struct {
+			private   int
+			IntVal    int     `json:"Int"`
+			FloatVal  float64 `clips:"Float"`
+			Sym       Symbol
+			MultiSlot []interface{} `json:"MS,omitempty"`
+		}
+		type Bar struct {
+			FooVal Foo `clips:"foo"`
+		}
+
+		output := Bar{
+			FooVal: Foo{
+				IntVal:   12,
+				FloatVal: 28.0,
+				Sym:      Symbol("bar"),
+				MultiSlot: []interface{}{
+					Symbol("a"),
+					Symbol("b"),
+					Symbol("c"),
+				},
+			},
+		}
+
+		// nil ptr
+		var retval *Bar
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, &output, cmpopts.IgnoreUnexported(output.FooVal))
+
+		// in-place ptr
+		retval = &Bar{}
+		retval2 := retval
+		err = inst.Extract(retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval.FooVal, retval2.FooVal, cmpopts.IgnoreUnexported(output.FooVal))
+		assert.DeepEqual(t, retval2, &output, cmpopts.IgnoreUnexported(output.FooVal))
+	})
+
+	t.Run("Nested to struct by ref", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot Int (type INTEGER))
+			(slot Float (type FLOAT))
+			(slot Sym (type SYMBOL))
+			(multislot MS))
+		`)
+		assert.NilError(t, err)
+
+		err = env.Build(`(defclass Bar (is-a USER)
+			(slot foo (type INSTANCE-ADDRESS) (allowed-classes Foo))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(fooinst of Foo (Int 12) (Float 28.0) (Sym bar) (MS a b c))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(barinst of Bar)`)
+		assert.NilError(t, err)
+
+		_, err = env.Eval(`(send [barinst] put-foo (instance-address [fooinst]))`)
+		assert.NilError(t, err)
+
+		type Foo struct {
+			private   int
+			IntVal    int     `json:"Int"`
+			FloatVal  float64 `clips:"Float"`
+			Sym       Symbol
+			MultiSlot []interface{} `json:"MS,omitempty"`
+		}
+		type Bar struct {
+			FooVal *Foo `clips:"foo"`
+		}
+
+		output := Bar{
+			FooVal: &Foo{
+				IntVal:   12,
+				FloatVal: 28.0,
+				Sym:      Symbol("bar"),
+				MultiSlot: []interface{}{
+					Symbol("a"),
+					Symbol("b"),
+					Symbol("c"),
+				},
+			},
+		}
+
+		// in-place, nil reference
+		var retval Bar
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output, cmpopts.IgnoreUnexported(*output.FooVal))
+
+		// in-place, existing reference
+		var fooval Foo
+		retval2 := Bar{
+			FooVal: &fooval,
+		}
+		err = inst.Extract(&retval2)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output, cmpopts.IgnoreUnexported(*output.FooVal))
+		// existing ref should have been updated, not replaced
+		assert.DeepEqual(t, &fooval, output.FooVal, cmpopts.IgnoreUnexported(*output.FooVal))
 	})
 }

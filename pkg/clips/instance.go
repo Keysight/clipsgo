@@ -6,7 +6,9 @@ package clips
 import "C"
 import (
 	"fmt"
+	"reflect"
 	"runtime"
+	"strings"
 	"unsafe"
 )
 
@@ -262,6 +264,99 @@ func (inst *Instance) Unmake() error {
 	ret := C.EnvUnmakeInstance(inst.env.env, inst.instptr)
 	if ret != 1 {
 		return EnvError(inst.env, "Unable to unmake instance")
+	}
+	return nil
+}
+
+// Extract attempts to marshall the CLIPS instance data into the user-provided or pointer
+// The return value can be a struct or a map of string to another datatype. If retval points
+// to a valid object, that object will be populated. If it is not, one will be created
+func (inst *Instance) Extract(retval interface{}) error {
+	ptr := reflect.ValueOf(retval)
+	if ptr.Kind() != reflect.Ptr {
+		return fmt.Errorf("Unable to store data to non-pointer type")
+	}
+	if ptr.IsNil() || !ptr.IsValid() {
+		return fmt.Errorf("Unable to store data to nil value")
+	}
+
+	val := reflect.Indirect(ptr.Elem())
+	if !val.IsValid() {
+		val = reflect.New(ptr.Type().Elem().Elem())
+		ptr.Elem().Set(val)
+		val = val.Elem()
+	}
+	typ := val.Type()
+
+	slots := inst.Slots(true)
+	switch val.Kind() {
+	case reflect.Interface:
+		val = reflect.ValueOf(make(map[string]interface{}))
+		ptr.Elem().Set(val)
+		typ = val.Type()
+		fallthrough
+	case reflect.Map:
+		if typ.Key().Kind() != reflect.String {
+			return fmt.Errorf("Key type must be type string")
+		}
+		if val.IsNil() {
+			val = reflect.MakeMap(reflect.MapOf(typ.Key(), typ.Elem()))
+			ptr.Elem().Set(val)
+		}
+		for k, v := range slots {
+			newval := reflect.Indirect(reflect.New(typ.Elem()))
+			if err := populateSlotValue(newval, v); err != nil {
+				return err
+			}
+			val.SetMapIndex(reflect.ValueOf(k), newval)
+		}
+	case reflect.Struct:
+		for ii := 0; ii < typ.NumField(); ii++ {
+			fieldval := val.Field(ii)
+			if !fieldval.CanSet() {
+				continue
+			}
+			field := typ.Field(ii)
+
+			// decide the CLIPS slot name based on tag
+			var slotname string
+			if tag, ok := field.Tag.Lookup("clips"); ok {
+				slotname = tag
+			} else if tag, ok := field.Tag.Lookup("json"); ok {
+				slotname = strings.Split(tag, ",")[0]
+			} else {
+				slotname = field.Name
+			}
+
+			fielddata, ok := slots[slotname]
+			if !ok {
+				continue
+			}
+			if err := populateSlotValue(fieldval, fielddata); err != nil {
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf("Unable to extract CLIPS instance to %v", typ.String())
+	}
+
+	return nil
+}
+
+func populateSlotValue(slot reflect.Value, data interface{}) error {
+	// see if the data to insert is an instance
+	subinst, ok := data.(*Instance)
+	if ok {
+		// extract the instance as well
+		if err := subinst.Extract(slot.Addr().Interface()); err != nil {
+			return err
+		}
+	} else {
+		converted, err := convertArg(reflect.TypeOf(data), slot.Type(), data)
+		if err != nil {
+			return err
+		}
+		slot.Set(reflect.ValueOf(converted))
 	}
 	return nil
 }
