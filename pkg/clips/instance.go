@@ -305,34 +305,17 @@ func (inst *Instance) Extract(retval interface{}) error {
 		}
 		for k, v := range slots {
 			newval := reflect.Indirect(reflect.New(typ.Elem()))
-			if err := convertArg(newval, reflect.ValueOf(v), true); err != nil {
+			if err := inst.env.convertArg(newval, reflect.ValueOf(v), true); err != nil {
 				return err
 			}
 			val.SetMapIndex(reflect.ValueOf(k), newval)
 		}
 	case reflect.Struct:
 		for ii := 0; ii < typ.NumField(); ii++ {
-			fieldval := val.Field(ii)
-			if !fieldval.CanSet() {
-				continue
-			}
 			field := typ.Field(ii)
+			fieldval := val.Field(ii)
 
-			// decide the CLIPS slot name based on tag
-			var slotname string
-			if tag, ok := field.Tag.Lookup("clips"); ok {
-				slotname = tag
-			} else if tag, ok := field.Tag.Lookup("json"); ok {
-				slotname = strings.Split(tag, ",")[0]
-			} else {
-				slotname = field.Name
-			}
-
-			fielddata, ok := slots[slotname]
-			if !ok {
-				continue
-			}
-			if err := convertArg(fieldval, reflect.ValueOf(fielddata), true); err != nil {
+			if err := inst.env.fillStruct(fieldval, field, slots); err != nil {
 				return err
 			}
 		}
@@ -341,4 +324,30 @@ func (inst *Instance) Extract(retval interface{}) error {
 	}
 
 	return nil
+}
+
+func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructField, slots map[string]interface{}) error {
+	if field.Anonymous {
+		embedType := fieldval.Type()
+		// treat fields of the anonymous class just like they are native
+		for ii := 0; ii < fieldval.NumField(); ii++ {
+			env.fillStruct(fieldval.Field(ii), embedType.Field(ii), slots)
+		}
+	}
+
+	// decide the CLIPS slot name based on tag
+	var slotname string
+	if tag, ok := field.Tag.Lookup("clips"); ok {
+		slotname = tag
+	} else if tag, ok := field.Tag.Lookup("json"); ok {
+		slotname = strings.Split(tag, ",")[0]
+	} else {
+		slotname = field.Name
+	}
+
+	fielddata, ok := slots[slotname]
+	if !ok {
+		return nil
+	}
+	return env.convertArg(fieldval, reflect.ValueOf(fielddata), true)
 }

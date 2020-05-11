@@ -347,7 +347,7 @@ func (do *DataObject) ExtractValue(retval interface{}, extractClasses bool) erro
 		return fmt.Errorf("retval must be a pointer to the value to be filled in")
 	}
 	val := do.Value()
-	return convertArg(reflect.ValueOf(retval), reflect.ValueOf(val), extractClasses)
+	return do.env.convertArg(reflect.ValueOf(retval), reflect.ValueOf(val), extractClasses)
 }
 
 // MustExtractValue attempts to put the represented data value into the item provided by the user, and panics if it can't
@@ -357,7 +357,7 @@ func (do *DataObject) MustExtractValue(retval interface{}, extractClasses bool) 
 	}
 }
 
-func convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
+func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
 	val := reflect.Indirect(output)
 	if !val.IsValid() {
 		val = reflect.New(output.Type().Elem())
@@ -376,9 +376,19 @@ func convertArg(output reflect.Value, data reflect.Value, extractClasses bool) e
 		}
 	}
 
-	if extractClasses && data.Kind() == reflect.Ptr {
+	if extractClasses {
 		dif := data.Interface()
-		subinst, ok := dif.(*Instance)
+		var subinst *Instance
+		var err error
+		instname, ok := dif.(InstanceName)
+		if ok {
+			subinst, err = env.FindInstance(instname, "")
+			if err != nil {
+				return err
+			}
+		} else {
+			subinst, ok = dif.(*Instance)
+		}
 		if ok {
 			// extract the instance
 			return subinst.Extract(output.Addr().Interface())
@@ -445,7 +455,7 @@ func convertArg(output reflect.Value, data reflect.Value, extractClasses bool) e
 		for i := 0; i < data.Len(); i++ {
 			// what we get from CLIPS is always []interface{}, so there's no check for that here
 			val := data.Index(i).Elem()
-			if err := convertArg(slice.Index(i), val, extractClasses); err != nil {
+			if err := env.convertArg(slice.Index(i), val, extractClasses); err != nil {
 				return err
 			}
 		}
