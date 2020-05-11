@@ -305,7 +305,7 @@ func (inst *Instance) Extract(retval interface{}) error {
 		}
 		for k, v := range slots {
 			newval := reflect.Indirect(reflect.New(typ.Elem()))
-			if err := populateSlotValue(newval, v); err != nil {
+			if err := convertArg(newval, reflect.ValueOf(v), true); err != nil {
 				return err
 			}
 			val.SetMapIndex(reflect.ValueOf(k), newval)
@@ -332,7 +332,7 @@ func (inst *Instance) Extract(retval interface{}) error {
 			if !ok {
 				continue
 			}
-			if err := populateSlotValue(fieldval, fielddata); err != nil {
+			if err := convertArg(fieldval, reflect.ValueOf(fielddata), true); err != nil {
 				return err
 			}
 		}
@@ -340,23 +340,5 @@ func (inst *Instance) Extract(retval interface{}) error {
 		return fmt.Errorf("Unable to extract CLIPS instance to %v", typ.String())
 	}
 
-	return nil
-}
-
-func populateSlotValue(slot reflect.Value, data interface{}) error {
-	// see if the data to insert is an instance
-	subinst, ok := data.(*Instance)
-	if ok {
-		// extract the instance as well
-		if err := subinst.Extract(slot.Addr().Interface()); err != nil {
-			return err
-		}
-	} else {
-		converted, err := convertArg(reflect.TypeOf(data), slot.Type(), data)
-		if err != nil {
-			return err
-		}
-		slot.Set(reflect.ValueOf(converted))
-	}
 	return nil
 }

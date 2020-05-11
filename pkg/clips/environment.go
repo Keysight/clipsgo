@@ -143,7 +143,7 @@ func (env *Environment) ExtractEval(retval interface{}, construct string) error 
 	if errint != 1 {
 		return EnvError(env, "Unable to parse construct \"%s\"", construct)
 	}
-	return data.ExtractValue(retval)
+	return data.ExtractValue(retval, false)
 }
 
 // Reset resets the CLIPS environment

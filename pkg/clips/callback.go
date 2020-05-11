@@ -83,14 +83,14 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 		} else {
 			needType = typ.In(index)
 		}
+		paramVal := reflect.New(needType).Elem()
 		arg := temp.Value()
-		haveType := reflect.TypeOf(arg)
-		arg, err := convertArg(haveType, needType, arg)
+		err := convertArg(paramVal, reflect.ValueOf(arg), false)
 		if err != nil {
 			printError(env, fmt.Sprintf("error calling function %s: %v", funcname, err.Error()))
 			return
 		}
-		arguments = append(arguments, reflect.ValueOf(arg))
+		arguments = append(arguments, paramVal)
 	}
 	ret := fn.Call(arguments)
 	if ret == nil {
