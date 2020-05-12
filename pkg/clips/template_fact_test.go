@@ -76,6 +76,35 @@ func TestTemplateFact(t *testing.T) {
 		assert.ErrorContains(t, err, "Unable to get slot")
 	})
 
+	t.Run("Fact Extract Slots", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build("(deftemplate foo (slot bar) (multislot baz))")
+		assert.NilError(t, err)
+
+		fact, err := env.AssertString(`(foo (bar 4) (baz a b c))`)
+		defer fact.Drop()
+		assert.NilError(t, err)
+
+		tf, ok := fact.(*TemplateFact)
+		assert.Assert(t, ok)
+
+		var intvar int
+		err = tf.ExtractSlot(&intvar, "bar")
+		assert.NilError(t, err)
+		assert.Equal(t, intvar, 4)
+
+		var msvar []Symbol
+		err = tf.ExtractSlot(&msvar, "baz")
+		assert.NilError(t, err)
+		assert.DeepEqual(t, msvar, []Symbol{
+			Symbol("a"),
+			Symbol("b"),
+			Symbol("c"),
+		})
+	})
+
 	t.Run("Fact Retract", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

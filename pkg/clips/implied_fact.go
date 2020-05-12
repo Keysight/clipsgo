@@ -120,13 +120,40 @@ func (f *ImpliedFact) Equal(otherfact Fact) bool {
 
 // Slots returns a function that can be called to get the next slot for this fact. Will return nil when no more slots remain
 func (f *ImpliedFact) Slots() (map[string]interface{}, error) {
-	val, err := slotValue(f.env, f.factptr, "")
+	data, err := slotValue(f.env, f.factptr, "")
 	if err != nil {
 		return nil, err
 	}
+	defer data.Delete()
 	ret := make(map[string]interface{}, 1)
-	ret[""] = val
+	ret[""] = data.Value()
 	return ret, nil
+}
+
+// Slot returns the value of the given slot. For Implied Facts, the only valid slot name is ""
+func (f *ImpliedFact) Slot(slotname string) (interface{}, error) {
+	if slotname != "" {
+		return nil, fmt.Errorf(`Invalid slot name "%s"`, slotname)
+	}
+	data, err := slotValue(f.env, f.factptr, "")
+	if err != nil {
+		return nil, err
+	}
+	defer data.Delete()
+	return data.Value(), nil
+}
+
+// ExtractSlot unmarshals the value of the given slot into the user provided object. For Implied Facts, the only valid slot name is ""
+func (f *ImpliedFact) ExtractSlot(retval interface{}, slotname string) error {
+	if slotname != "" {
+		return fmt.Errorf(`Invalid slot name "%s"`, slotname)
+	}
+	data, err := slotValue(f.env, f.factptr, "")
+	if err != nil {
+		return err
+	}
+	defer data.Delete()
+	return data.ExtractValue(retval, false)
 }
 
 // Set alters the item at a specific in the multifield

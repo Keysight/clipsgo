@@ -122,17 +122,34 @@ func (f *TemplateFact) Slots() (map[string]interface{}, error) {
 		if !ok {
 			panic("Unexpected data returned from CLIPS for slot names")
 		}
-		ret[string(namestr)], err = slotValue(f.env, f.factptr, namestr)
+		data, err = slotValue(f.env, f.factptr, namestr)
 		if err != nil {
 			return nil, err
 		}
+		defer data.Delete()
+		ret[string(namestr)] = data.Value()
 	}
 	return ret, nil
 }
 
 // Slot returns the value stored in the given slot
 func (f *TemplateFact) Slot(name string) (interface{}, error) {
-	return slotValue(f.env, f.factptr, Symbol(name))
+	data, err := slotValue(f.env, f.factptr, Symbol(name))
+	if err != nil {
+		return nil, err
+	}
+	defer data.Delete()
+	return data.Value(), nil
+}
+
+// ExtractSlot unmarshals the given slot value into the object provided by the user
+func (f *TemplateFact) ExtractSlot(retval interface{}, name string) error {
+	data, err := slotValue(f.env, f.factptr, Symbol(name))
+	if err != nil {
+		return err
+	}
+	defer data.Delete()
+	return data.ExtractValue(retval, false)
 }
 
 // Set alters the item at a specific in the multifield

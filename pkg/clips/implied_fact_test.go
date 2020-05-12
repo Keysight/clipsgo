@@ -53,6 +53,23 @@ func TestImpliedFact(t *testing.T) {
 		assert.Equal(t, arr[0], Symbol("a"))
 		assert.Equal(t, arr[1], Symbol("b"))
 		assert.Equal(t, arr[2], Symbol("c"))
+
+		val, err = fact.Slot("")
+		assert.NilError(t, err)
+
+		arr, ok = val.([]interface{})
+		assert.Assert(t, ok)
+		assert.Equal(t, len(arr), 3)
+		assert.Equal(t, arr[0], Symbol("a"))
+		assert.Equal(t, arr[1], Symbol("b"))
+		assert.Equal(t, arr[2], Symbol("c"))
+
+		var strval []string
+		err = fact.ExtractSlot(&strval, "")
+		assert.NilError(t, err)
+		assert.DeepEqual(t, strval, []string{
+			"a", "b", "c",
+		})
 	})
 
 	t.Run("Fact Retract", func(t *testing.T) {

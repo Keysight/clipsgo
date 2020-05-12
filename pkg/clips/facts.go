@@ -42,6 +42,12 @@ type Fact interface {
 
 	// Slots returns a *copy* of slot values for each slot in this fact
 	Slots() (map[string]interface{}, error)
+
+	// Slot returns the value of a given slot. For Implied Facts, "" is the only valid slot name
+	Slot(slotname string) (interface{}, error)
+
+	// ExtractSlot unmarshals the given slot into the user provided object
+	ExtractSlot(retval interface{}, slotname string) error
 }
 
 // Facts returns a slice of all facts known to CLIPS
@@ -139,7 +145,7 @@ func factPPString(env *Environment, factptr unsafe.Pointer) string {
 	return C.GoString(buf)
 }
 
-func slotValue(env *Environment, factptr unsafe.Pointer, slot Symbol) (interface{}, error) {
+func slotValue(env *Environment, factptr unsafe.Pointer, slot Symbol) (*DataObject, error) {
 	implied := C.implied_deftemplate(C.EnvFactDeftemplate(env.env, factptr))
 
 	if implied == 1 && slot != "" {
@@ -152,10 +158,10 @@ func slotValue(env *Environment, factptr unsafe.Pointer, slot Symbol) (interface
 		defer C.free(unsafe.Pointer(cslot))
 	}
 	data := createDataObject(env)
-	defer data.Delete()
 	ret := C.EnvGetFactSlot(env.env, factptr, cslot, data.byRef())
 	if ret != 1 {
+		data.Delete()
 		return nil, EnvError(env, "Unable to get slot value")
 	}
-	return data.Value(), nil
+	return data, nil
 }
