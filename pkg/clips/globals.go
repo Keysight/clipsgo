@@ -56,8 +56,8 @@ func createGlobal(env *Environment, glbptr unsafe.Pointer) *Global {
 	}
 }
 
-// Equals returns true if the other object represents the same global in CLIPS
-func (g *Global) Equals(other *Global) bool {
+// Equal returns true if the other object represents the same global in CLIPS
+func (g *Global) Equal(other *Global) bool {
 	return g.glbptr == other.glbptr
 }
 

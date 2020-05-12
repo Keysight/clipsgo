@@ -54,7 +54,7 @@ func TestGeneric(t *testing.T) {
 		assert.Equal(t, generic.String(), `(defgeneric MAIN::foo "lame generic")`)
 	})
 
-	t.Run("Generics equals", func(t *testing.T) {
+	t.Run("Generics equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -69,11 +69,11 @@ func TestGeneric(t *testing.T) {
 		generic2, err := env.FindGeneric("foo")
 		assert.NilError(t, err)
 
-		assert.Assert(t, generic.Equals(generic2))
+		assert.Assert(t, generic.Equal(generic2))
 
 		generic, err = env.FindGeneric("bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !generic.Equals(generic2))
+		assert.Assert(t, !generic.Equal(generic2))
 	})
 
 	t.Run("Generics call", func(t *testing.T) {
@@ -211,7 +211,7 @@ func TestMethod(t *testing.T) {
    (+ ?a ?b))`)
 	})
 
-	t.Run("Method equals", func(t *testing.T) {
+	t.Run("Method equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -231,8 +231,8 @@ func TestMethod(t *testing.T) {
 		methods2 := generic.Methods()
 		assert.Equal(t, len(methods2), 2)
 
-		assert.Assert(t, methods[0].Equals(methods2[0]))
-		assert.Assert(t, !methods[0].Equals(methods2[1]))
+		assert.Assert(t, methods[0].Equal(methods2[0]))
+		assert.Assert(t, !methods[0].Equal(methods2[1]))
 	})
 
 	t.Run("Method watch", func(t *testing.T) {

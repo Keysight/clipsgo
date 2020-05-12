@@ -57,8 +57,8 @@ func createModule(env *Environment, modptr unsafe.Pointer) *Module {
 	}
 }
 
-// Equals returns true if the other module references the same CLIPS module
-func (m *Module) Equals(other *Module) bool {
+// Equal returns true if the other module references the same CLIPS module
+func (m *Module) Equal(other *Module) bool {
 	return m.modptr == other.modptr
 }
 

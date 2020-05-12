@@ -64,7 +64,7 @@ func TestClass(t *testing.T) {
    (multislot baz))`)
 	})
 
-	t.Run("Class equals", func(t *testing.T) {
+	t.Run("Class equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -78,11 +78,11 @@ func TestClass(t *testing.T) {
 		class2, err := env.FindClass("Foo")
 		assert.NilError(t, err)
 
-		assert.Assert(t, class.Equals(class2))
+		assert.Assert(t, class.Equal(class2))
 
 		class2, err = env.FindClass("Bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !class.Equals(class2))
+		assert.Assert(t, !class.Equal(class2))
 	})
 
 	t.Run("Class queries", func(t *testing.T) {
@@ -325,7 +325,7 @@ func TestMessageHandler(t *testing.T) {
 		assert.Equal(t, !mh.Deletable(), true)
 	})
 
-	t.Run("MessageHandler equals", func(t *testing.T) {
+	t.Run("MessageHandler equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -339,11 +339,11 @@ func TestMessageHandler(t *testing.T) {
 		assert.NilError(t, err)
 		mh2, err := class.FindMessageHandler("get-bar", PRIMARY)
 		assert.NilError(t, err)
-		assert.Assert(t, mh.Equals(mh2))
+		assert.Assert(t, mh.Equal(mh2))
 
 		mh2, err = class.FindMessageHandler("put-bar", PRIMARY)
 		assert.NilError(t, err)
-		assert.Assert(t, !mh.Equals(mh2))
+		assert.Assert(t, !mh.Equal(mh2))
 	})
 
 	t.Run("MessageHandler watch", func(t *testing.T) {

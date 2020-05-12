@@ -96,13 +96,13 @@ func TestGlobal(t *testing.T) {
 
 		glob2, err := env.FindGlobal("foo")
 		assert.NilError(t, err)
-		assert.Assert(t, glob.Equals(glob2))
+		assert.Assert(t, glob.Equal(glob2))
 
 		err = env.Build(`(defglobal ?*bar* = "another")`)
 		assert.NilError(t, err)
 		glob2, err = env.FindGlobal("bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !glob.Equals(glob2))
+		assert.Assert(t, !glob.Equal(glob2))
 	})
 
 	t.Run("Set Global", func(t *testing.T) {

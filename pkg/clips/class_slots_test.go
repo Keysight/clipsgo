@@ -44,15 +44,15 @@ func TestClassSlots(t *testing.T) {
 		slot2, err := Foo.Slot("bar")
 		assert.NilError(t, err)
 
-		assert.Assert(t, slot.Equals(slot2))
+		assert.Assert(t, slot.Equal(slot2))
 
 		slot2, err = Foo.Slot("baz")
 		assert.NilError(t, err)
-		assert.Assert(t, !slot.Equals(slot2))
+		assert.Assert(t, !slot.Equal(slot2))
 
 		slot2, err = Bar.Slot("bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !slot.Equals(slot2))
+		assert.Assert(t, !slot.Equal(slot2))
 	})
 
 	t.Run("ClassSlot queries", func(t *testing.T) {

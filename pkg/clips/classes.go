@@ -107,8 +107,8 @@ func (cl *Class) String() string {
 	return strings.TrimRight(C.GoString(ret), "\n")
 }
 
-// Equals returns true if other class represents the same CLIPS class as this one
-func (cl *Class) Equals(other *Class) bool {
+// Equal returns true if other class represents the same CLIPS class as this one
+func (cl *Class) Equal(other *Class) bool {
 	return cl.clptr == other.clptr
 }
 
@@ -350,9 +350,9 @@ func (mh *MessageHandler) String() string {
 	return strings.TrimRight(C.GoString(ret), "\n")
 }
 
-// Equals returns true if this messagehandler represents the same CLIPS handler as the other one
-func (mh *MessageHandler) Equals(other *MessageHandler) bool {
-	return mh.class.Equals(other.class) && mh.index == other.index
+// Equal returns true if this messagehandler represents the same CLIPS handler as the other one
+func (mh *MessageHandler) Equal(other *MessageHandler) bool {
+	return mh.class.Equal(other.class) && mh.index == other.index
 }
 
 // Type returns the messagehandler type

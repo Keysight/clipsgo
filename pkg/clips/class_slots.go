@@ -30,9 +30,9 @@ func (cs *ClassSlot) String() string {
 	return cs.name
 }
 
-// Equals returns true if this slot represents the same CLIPS slot as the other slot
-func (cs *ClassSlot) Equals(other *ClassSlot) bool {
-	return cs.class.Equals(other.class) && cs.name == other.name
+// Equal returns true if this slot represents the same CLIPS slot as the other slot
+func (cs *ClassSlot) Equal(other *ClassSlot) bool {
+	return cs.class.Equal(other.class) && cs.name == other.name
 }
 
 // Public returns true if the slot is public

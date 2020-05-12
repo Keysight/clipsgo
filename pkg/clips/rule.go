@@ -227,8 +227,8 @@ func createRule(env *Environment, rptr unsafe.Pointer) *Rule {
 	}
 }
 
-// Equals returns true if the other rule represents the same CLIPS rule as this one
-func (r *Rule) Equals(other *Rule) bool {
+// Equal returns true if the other rule represents the same CLIPS rule as this one
+func (r *Rule) Equal(other *Rule) bool {
 	return r.rptr == other.rptr
 }
 
@@ -349,8 +349,8 @@ func createActivation(env *Environment, actptr unsafe.Pointer) *Activation {
 	}
 }
 
-// Equals returns true if other activation represents the same CLIPS activation as this one
-func (a *Activation) Equals(other *Activation) bool {
+// Equal returns true if other activation represents the same CLIPS activation as this one
+func (a *Activation) Equal(other *Activation) bool {
 	return a.actptr == other.actptr
 }
 

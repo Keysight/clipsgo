@@ -55,8 +55,8 @@ func createTemplate(env *Environment, tplptr unsafe.Pointer) *Template {
 	}
 }
 
-// Equals returns true if this template represents the same template as the given one
-func (t *Template) Equals(other *Template) bool {
+// Equal returns true if this template represents the same template as the given one
+func (t *Template) Equal(other *Template) bool {
 	return t.tplptr == other.tplptr
 }
 
@@ -170,12 +170,12 @@ func (t *Template) createTemplateSlot(name string) *TemplateSlot {
 	}
 }
 
-// Equals checks if the other templateslot represents the same slot
-func (ts *TemplateSlot) Equals(other *TemplateSlot) bool {
+// Equal checks if the other templateslot represents the same slot
+func (ts *TemplateSlot) Equal(other *TemplateSlot) bool {
 	if other == nil {
 		return false
 	}
-	return ts.tpl.Equals(other.tpl) && ts.name == other.name
+	return ts.tpl.Equal(other.tpl) && ts.name == other.name
 }
 
 func (ts *TemplateSlot) String() string {

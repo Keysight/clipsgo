@@ -23,7 +23,7 @@ func TestTemplate(t *testing.T) {
 		assert.Equal(t, tmpl.Name(), "foo")
 	})
 
-	t.Run("Template Equals", func(t *testing.T) {
+	t.Run("Template Equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -36,10 +36,10 @@ func TestTemplate(t *testing.T) {
 		tmpl2, err := env.FindTemplate("foo")
 		assert.NilError(t, err)
 
-		assert.Assert(t, tmpl.Equals(tmpl2))
+		assert.Assert(t, tmpl.Equal(tmpl2))
 	})
 
-	t.Run("Template Not Equals", func(t *testing.T) {
+	t.Run("Template Not Equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -55,7 +55,7 @@ func TestTemplate(t *testing.T) {
 
 		tmpl2 := fact.Template()
 
-		assert.Assert(t, !tmpl.Equals(tmpl2))
+		assert.Assert(t, !tmpl.Equal(tmpl2))
 	})
 
 	t.Run("Template String", func(t *testing.T) {
@@ -176,7 +176,7 @@ func TestTemplateSlot(t *testing.T) {
 		assert.Equal(t, bar.Name(), "bar")
 	})
 
-	t.Run("TemplateSlot equals", func(t *testing.T) {
+	t.Run("TemplateSlot equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -192,11 +192,11 @@ func TestTemplateSlot(t *testing.T) {
 		baz, ok := slots["baz"]
 		assert.Assert(t, ok)
 
-		assert.Assert(t, !bar.Equals(baz))
+		assert.Assert(t, !bar.Equal(baz))
 		slots = tmpl.Slots()
 		bar2, ok := slots["bar"]
 		assert.Assert(t, ok)
-		assert.Assert(t, bar.Equals(bar2))
+		assert.Assert(t, bar.Equal(bar2))
 	})
 
 	t.Run("TemplateSlot multifield", func(t *testing.T) {

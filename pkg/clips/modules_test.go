@@ -70,7 +70,7 @@ func TestModules(t *testing.T) {
    (export ?ALL))`)
 	})
 
-	t.Run("Module equals", func(t *testing.T) {
+	t.Run("Module equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -84,10 +84,10 @@ func TestModules(t *testing.T) {
 
 		module2, err := env.FindModule("Foo")
 		assert.NilError(t, err)
-		assert.Assert(t, module.Equals(module2))
+		assert.Assert(t, module.Equal(module2))
 
 		module2, err = env.FindModule("Bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !module.Equals(module2))
+		assert.Assert(t, !module.Equal(module2))
 	})
 }

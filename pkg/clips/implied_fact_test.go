@@ -142,7 +142,7 @@ func TestImpliedFact(t *testing.T) {
 		})
 	})
 
-	t.Run("Equals", func(t *testing.T) {
+	t.Run("Equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -152,7 +152,7 @@ func TestImpliedFact(t *testing.T) {
 
 		factlist := env.Facts()
 		assert.Equal(t, len(factlist), 2)
-		assert.Assert(t, fact.Equals(factlist[1]))
+		assert.Assert(t, fact.Equal(factlist[1]))
 	})
 
 }

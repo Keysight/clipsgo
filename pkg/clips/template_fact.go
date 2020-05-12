@@ -93,8 +93,8 @@ func (f *TemplateFact) String() string {
 	return strings.TrimRight(split[len(split)-1], "\n")
 }
 
-// Equals returns true if this fact equals the given fact
-func (f *TemplateFact) Equals(otherfact Fact) bool {
+// Equal returns true if this fact equal the given fact
+func (f *TemplateFact) Equal(otherfact Fact) bool {
 	other, ok := otherfact.(*TemplateFact)
 	if !ok {
 		return false

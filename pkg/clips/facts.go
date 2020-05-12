@@ -37,8 +37,8 @@ type Fact interface {
 	// Drop drops the reference to the fact in CLIPS. should be called when done with the fact
 	Drop()
 
-	// Equals returns true if this fact equals the given fact
-	Equals(Fact) bool
+	// Equal returns true if this fact equal the given fact
+	Equal(Fact) bool
 
 	// Slots returns a *copy* of slot values for each slot in this fact
 	Slots() (map[string]interface{}, error)

@@ -45,8 +45,8 @@ func createFunction(env *Environment, fptr unsafe.Pointer) *Function {
 	}
 }
 
-// Equals returns true if the other function represents the same CLIPS function as this one
-func (f *Function) Equals(other *Function) bool {
+// Equal returns true if the other function represents the same CLIPS function as this one
+func (f *Function) Equal(other *Function) bool {
 	return f.fptr == other.fptr
 }
 

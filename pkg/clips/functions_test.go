@@ -56,7 +56,7 @@ func TestFunctions(t *testing.T) {
    (+ ?a ?b))`)
 	})
 
-	t.Run("Function equals", func(t *testing.T) {
+	t.Run("Function equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -69,10 +69,10 @@ func TestFunctions(t *testing.T) {
 		assert.NilError(t, err)
 		ftion2, err := env.FindFunction("foo")
 		assert.NilError(t, err)
-		assert.Assert(t, ftion.Equals(ftion2))
+		assert.Assert(t, ftion.Equal(ftion2))
 		ftion2, err = env.FindFunction("bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !ftion.Equals(ftion2))
+		assert.Assert(t, !ftion.Equal(ftion2))
 	})
 
 	t.Run("Function call", func(t *testing.T) {

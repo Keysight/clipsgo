@@ -52,8 +52,8 @@ func createGeneric(env *Environment, genptr unsafe.Pointer) *Generic {
 	}
 }
 
-// Equals returns true if the other generic represents the same CLIPS generic
-func (g *Generic) Equals(other *Generic) bool {
+// Equal returns true if the other generic represents the same CLIPS generic
+func (g *Generic) Equal(other *Generic) bool {
 	return g.genptr == other.genptr
 }
 
@@ -150,8 +150,8 @@ func createMethod(gen *Generic, index C.long) *Method {
 	}
 }
 
-// Equals returns true of other represents the same CLIPS method as this
-func (m *Method) Equals(other *Method) bool {
+// Equal returns true of other represents the same CLIPS method as this
+func (m *Method) Equal(other *Method) bool {
 	return m.gen.genptr == other.gen.genptr && m.index == other.index
 }
 

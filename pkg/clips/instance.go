@@ -157,8 +157,8 @@ func (inst *Instance) Drop() {
 	}
 }
 
-// Equals returns true if the other instance represents the same CLIPS inst as this one
-func (inst *Instance) Equals(other *Instance) bool {
+// Equal returns true if the other instance represents the same CLIPS inst as this one
+func (inst *Instance) Equal(other *Instance) bool {
 	return inst.instptr == other.instptr
 }
 

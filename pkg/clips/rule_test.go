@@ -246,7 +246,7 @@ func TestRule(t *testing.T) {
    (printout t "fired"))`)
 	})
 
-	t.Run("Rule equals", func(t *testing.T) {
+	t.Run("Rule equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -259,11 +259,11 @@ func TestRule(t *testing.T) {
 		assert.NilError(t, err)
 		rule2, err := env.FindRule("foo")
 		assert.NilError(t, err)
-		assert.Assert(t, rule.Equals(rule2))
+		assert.Assert(t, rule.Equal(rule2))
 
 		rule2, err = env.FindRule("bar")
 		assert.NilError(t, err)
-		assert.Assert(t, !rule.Equals(rule2))
+		assert.Assert(t, !rule.Equal(rule2))
 	})
 
 	t.Run("Module", func(t *testing.T) {
@@ -401,7 +401,7 @@ func TestActivations(t *testing.T) {
 		assert.Equal(t, activation.String(), `0      foo: *`)
 	})
 
-	t.Run("Activation equals", func(t *testing.T) {
+	t.Run("Activation equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -419,9 +419,9 @@ func TestActivations(t *testing.T) {
 		assert.Equal(t, len(activations), 2)
 		activation2 := activations[0]
 
-		assert.Assert(t, activation.Equals(activation2))
+		assert.Assert(t, activation.Equal(activation2))
 		activation2 = activations[1]
-		assert.Assert(t, !activation.Equals(activation2))
+		assert.Assert(t, !activation.Equal(activation2))
 	})
 
 	t.Run("Activation salience", func(t *testing.T) {

@@ -109,8 +109,8 @@ func (f *ImpliedFact) String() string {
 	return strings.TrimRight(split[len(split)-1], "\n")
 }
 
-// Equals returns true if this fact equals the given fact
-func (f *ImpliedFact) Equals(otherfact Fact) bool {
+// Equal returns true if this fact equal the given fact
+func (f *ImpliedFact) Equal(otherfact Fact) bool {
 	other, ok := otherfact.(*ImpliedFact)
 	if !ok {
 		return false

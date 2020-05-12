@@ -262,7 +262,7 @@ func TestInstance(t *testing.T) {
 		assert.Equal(t, inst.String(), "[gen1] of Foo (bar 12)")
 	})
 
-	t.Run("Instance equals", func(t *testing.T) {
+	t.Run("Instance equal", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
@@ -275,11 +275,11 @@ func TestInstance(t *testing.T) {
 		inst2, err := env.FindInstance("gen1", "")
 		assert.NilError(t, err)
 
-		assert.Assert(t, inst.Equals(inst2))
+		assert.Assert(t, inst.Equal(inst2))
 
 		inst2, err = env.MakeInstance(`(of Foo (bar 77))`)
 		assert.NilError(t, err)
-		assert.Assert(t, !inst.Equals(inst2))
+		assert.Assert(t, !inst.Equal(inst2))
 	})
 
 	t.Run("Class", func(t *testing.T) {
