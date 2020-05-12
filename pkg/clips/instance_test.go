@@ -643,6 +643,47 @@ func TestExtract(t *testing.T) {
 		assert.DeepEqual(t, retval, output, cmpopts.IgnoreUnexported(output))
 	})
 
+	t.Run("Pointer to slice", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot Int (type INTEGER))
+			(slot Float (type FLOAT))
+			(slot Sym (type SYMBOL))
+			(multislot MS))
+		`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(of Foo (Int 12) (Float 28.0) (Sym bar) (MS a b c))`)
+		assert.NilError(t, err)
+
+		type Foo struct {
+			private   int
+			IntVal    int     `json:"Int"`
+			FloatVal  float64 `clips:"Float"`
+			Sym       Symbol
+			MultiSlot *[]interface{} `json:"MS,omitempty"`
+		}
+
+		output := Foo{
+			IntVal:   12,
+			FloatVal: 28.0,
+			Sym:      Symbol("bar"),
+			MultiSlot: &[]interface{}{
+				Symbol("a"),
+				Symbol("b"),
+				Symbol("c"),
+			},
+		}
+
+		// in-place
+		var retval Foo
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output, cmpopts.IgnoreUnexported(output))
+	})
+
 	t.Run("Nested to struct", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

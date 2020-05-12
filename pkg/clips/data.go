@@ -357,13 +357,17 @@ func (do *DataObject) MustExtractValue(retval interface{}, extractClasses bool) 
 	}
 }
 
-func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
+func safeIndirect(output reflect.Value) reflect.Value {
 	val := reflect.Indirect(output)
 	if !val.IsValid() {
 		val = reflect.New(output.Type().Elem())
 		output.Set(val)
 		val = val.Elem()
 	}
+	return val
+}
+func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
+	val := safeIndirect(output)
 
 	if extractClasses {
 		dif := data.Interface()
@@ -403,23 +407,22 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		}
 	}
 
+	checktype := val.Type()
 	if val.Kind() == reflect.Ptr && data.Kind() != reflect.Ptr {
-		// if we were handed a pointer, make sure it points to something and then set that thing
-		newval := reflect.Indirect(val)
-		if !newval.IsValid() {
-			newval = reflect.New(val.Type().Elem())
-		}
-		val.Set(newval)
-		val = val.Elem()
+		checktype = checktype.Elem()
 	}
 
-	if data.Type().AssignableTo(val.Type()) {
+	if data.Type().AssignableTo(checktype) {
+		if val.Kind() == reflect.Ptr && data.Kind() != reflect.Ptr {
+			val = safeIndirect(val)
+		}
 		val.Set(data)
 		return nil
 	}
 
-	if data.Type().Kind() == reflect.Int64 {
+	if data.Kind() == reflect.Int64 {
 		// Make an exception when it's just loss of scale, and make it work
+		val = safeIndirect(val)
 		intval := data.Int()
 		var checkval int64
 		switch val.Type().Kind() {
@@ -451,7 +454,8 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		}
 		val.SetInt(checkval)
 		return nil
-	} else if data.Type().Kind() == reflect.Float64 {
+	} else if data.Kind() == reflect.Float64 {
+		val = safeIndirect(val)
 		floatval := data.Float()
 		switch val.Type().Kind() {
 		case reflect.Float64:
@@ -465,20 +469,43 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		}
 		val.SetFloat(floatval)
 		return nil
-	} else if data.Type().Kind() == reflect.Slice && val.Type().Kind() == reflect.Slice {
+	} else if data.Kind() == reflect.Slice {
+		sliceval := val
+		slicetype := val.Type()
+		var mustSet bool
+		if slicetype.Kind() == reflect.Ptr {
+			// if we were handed a pointer, make sure it points to something and then set that thing
+			sliceval = sliceval.Elem()
+			slicetype = slicetype.Elem()
+		}
+		if slicetype.Kind() != reflect.Slice {
+			return fmt.Errorf(`Invalid type "%v", expected "%v"`, data.Type(), val.Type())
+		}
+		if !sliceval.IsValid() || sliceval.Cap() < data.Len() {
+			mustSet = true
+			sliceval = reflect.MakeSlice(reflect.SliceOf(slicetype.Elem()), data.Len(), data.Len())
+		}
 		// see if we can translate to right kind of slice
-		eNeedType := val.Type().Elem()
-		slice := reflect.MakeSlice(reflect.SliceOf(eNeedType), data.Len(), data.Len())
 		for i := 0; i < data.Len(); i++ {
 			// what we get from CLIPS is always []interface{}, so there's no check for that here
-			val := data.Index(i).Elem()
-			if err := env.convertArg(slice.Index(i), val, extractClasses); err != nil {
+			indexval := data.Index(i).Elem()
+			if err := env.convertArg(sliceval.Index(i), indexval, extractClasses); err != nil {
 				return err
 			}
 		}
-		val.Set(slice)
+		if data.Len() > 0 && mustSet {
+			if val.Kind() == reflect.Ptr {
+				val.Set(reflect.New(sliceval.Type()))
+				val.Elem().Set(sliceval)
+			} else {
+				val.Set(sliceval)
+			}
+		}
 		return nil
-	} else if data.Type().ConvertibleTo(val.Type()) {
+	} else if data.Type().ConvertibleTo(checktype) {
+		if val.Kind() == reflect.Ptr && data.Kind() != reflect.Ptr {
+			val = safeIndirect(val)
+		}
 		// This could actually handle ints and floats, too, except it hides wraparound and loss of precision
 		converted := data.Convert(val.Type())
 		val.Set(converted)
