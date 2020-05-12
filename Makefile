@@ -32,7 +32,7 @@ clips: clips_source
 endif
 
 clipsgo: clips
-	$(GO) build -o clipsgo
+	$(GO) build -o clipsgo ./cmd/clipsgo
 
 test: clips
 	GODEBUG=cgocheck=2 $(GO) test -coverprofile=cover.out ./pkg/...
