@@ -268,6 +268,16 @@ func (inst *Instance) Unmake() error {
 	return nil
 }
 
+// ExtractSlot obtains the given slot value into the user-provided object
+func (inst *Instance) ExtractSlot(retval interface{}, name string) error {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	data := createDataObject(inst.env)
+	defer data.Delete()
+	C.EnvDirectGetSlot(inst.env.env, inst.instptr, cname, data.byRef())
+	return data.ExtractValue(retval, true)
+}
+
 // Extract attempts to marshall the CLIPS instance data into the user-provided or pointer
 // The return value can be a struct or a map of string to another datatype. If retval points
 // to a valid object, that object will be populated. If it is not, one will be created

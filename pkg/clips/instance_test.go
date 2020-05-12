@@ -497,6 +497,29 @@ func TestExtract(t *testing.T) {
 		err = inst.Extract(&retval)
 		assert.NilError(t, err)
 		assert.DeepEqual(t, retval2, output)
+
+		// individual slots
+		var intval int
+		err = inst.ExtractSlot(&intval, "int")
+		assert.NilError(t, err)
+		assert.Equal(t, intval, 12)
+
+		var floatval float64
+		err = inst.ExtractSlot(&floatval, "float")
+		assert.NilError(t, err)
+		assert.Equal(t, floatval, 28.0)
+
+		var symvar Symbol
+		err = inst.ExtractSlot(&symvar, "sym")
+		assert.NilError(t, err)
+		assert.Equal(t, symvar, Symbol("bar"))
+
+		var msvar []string
+		err = inst.ExtractSlot(&msvar, "ms")
+		assert.NilError(t, err)
+		assert.DeepEqual(t, msvar, []string{
+			"a", "b", "c",
+		})
 	})
 
 	t.Run("Restrictive type map", func(t *testing.T) {
