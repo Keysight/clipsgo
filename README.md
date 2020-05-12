@@ -47,9 +47,18 @@ CLIPS data types are mapped to GO types as follows
 
 ## Basic Data Abstractions
 
-For detailed information about CLIPS see the [CLIPS documentation](http://www.clipsrules.net/Documentation.html)
+For detailed information about CLIPS see the [CLIPS
+documentation](http://www.clipsrules.net/Documentation.html)
 
-While most of the CLIPS documentation starts from _facts_ and _templates_, given that you'll be programming Go I recommend that you build your rules and "facts" based on classes and instances, instead of templates and facts. Everything you can do with facts, you can do with instances, but the reverse is not true. Any Go programmer is likely to be familiar with the object oriented concepts of [CLIPS Object Oriented Language (COOL)](https://www.csie.ntu.edu.tw/~sylee/courses/clips/bpg/node9.html) and in fact may find them more familiar and comfortable than the older, more procedural base language.
+While most of the CLIPS documentation starts from _facts_ and _templates_,
+given that you'll be programming Go I recommend that you build your rules and
+"facts" based on classes and instances, instead of templates and facts.
+Everything you can do with facts, you can do with instances, but the reverse
+is not true. Any Go programmer is likely to be familiar with the object
+oriented concepts of [CLIPS Object Oriented Language
+(COOL)](https://www.csie.ntu.edu.tw/~sylee/courses/clips/bpg/node9.html) and
+in fact may find them more familiar and comfortable than the older, more
+procedural base language.
 
 ### Instances
 
@@ -82,6 +91,52 @@ assert.NilError(t, err)
 assert.Equal(t, ret, int64(12))
 
 ret := inst.Send("handler", "")
+```
+
+An instance can also be "extracted" as either a struct or a map. This
+functionality is somewhat analogous to json.Unmarshal. The caller supplies an
+object which will be filled in by clipsgo.
+
+Matching the name of the struct field to the slot name is determined by the
+following rules:
+* If the struct field has a "clips" tag, that tag is used as the slot nam.
+* Otherwise, if the struct has a "json" tag, that tag is used.
+* Otherwise the field name of the struct is used
+
+```go
+err := env.Build(`(defclass Foo (is-a USER)
+    (slot Int (type INTEGER))
+    (slot Float (type FLOAT))
+    (slot Sym (type SYMBOL))
+    (multislot MS))
+`)
+assert.NilError(t, err)
+
+inst, err := env.MakeInstance(`(of Foo (Int 12) (Float 28.0) (Sym bar) (MS a b c))`)
+assert.NilError(t, err)
+
+type Foo struct {
+    IntVal    int     `json:"Int"`
+    FloatVal  float64 `clips:"Float"`
+    Sym       Symbol
+    MultiSlot *[]interface{} `json:"MS,omitempty"`
+}
+
+var retval Foo
+err = inst.Extract(&retval)
+
+output := Foo{
+    IntVal:   12,
+    FloatVal: 28.0,
+    Sym:      Symbol("bar"),
+    MultiSlot: &[]interface{}{
+        Symbol("a"),
+        Symbol("b"),
+        Symbol("c"),
+    },
+}
+
+assert.DeepEqual(t, retval, output)
 ```
 
 ### Facts
@@ -169,6 +224,34 @@ ret, err := env.Eval("(create$ foo bar baz)")
 
 *Note that this functionality relies on CLIPS `eval` function, which does not accept aribtrary commands. It does not allow CLIPS constructs to be created for example - for that you need `env.Build()`. It also does not allow facts to be asserted - use `env.AssertString()`*
 
+The return from Eval is interface{}, since it is not possible to know in advance what kind of data will be returned.
+
+For cases where the user is able to know an expected return type, an ExtractEval function is provided. This will marshal the returned data into an object provided by the user. Using ExtractEval can reduce the amount of boilerplate type checking required. Type conversions are applied as necessary. An error will be generated if a numeric type conversion results in loss of precision.
+
+```go
+intval := 4
+err = env.ExtractEval(&intval, "12")
+assert.NilError(t, err)
+assert.Equal(t, intval, 12)
+
+sliceval := make([]string, 0)
+err = env.ExtractEval(sliceval, "(create$ a b c d e f)")
+assert.NilError(t, err)
+assert.DeepEqual(t, sliceval, []string{
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+})
+
+var factval Fact
+ret, err := env.ExtractEval(&factval, "(bind ?ret (assert (foo a b c)))")
+assert.NilError(t, err)
+assert.Equal(t, factval.String(), "(foo a b c)")
+```
+
 ### SendCommand
 
 In order to overcome some of the limitations of the CLIPS `eval` command, clipsgo provides a higher-level function called `SendCommand` which accepts any arbitrary CLIPS command.
@@ -200,7 +283,8 @@ import (
 env := clips.CreateEnvironment()
 defer env.Delete()
 
-err := env.Build(`(defrule my-rule
+err := env.Build(`
+(defrule my-rule
     (my-fact first-slot)
 =>
     (printout t "My Rule fired!" crlf)
