@@ -31,6 +31,22 @@ func TestImpliedFact(t *testing.T) {
 		assert.Equal(t, fact.String(), "(foo a b c)")
 	})
 
+	t.Run("Fact Extract", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		fact, err := env.AssertString(`(foo a b c)`)
+		defer fact.Drop()
+		assert.NilError(t, err)
+
+		var retval []string
+		err = fact.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, []string{
+			"a", "b", "c",
+		})
+	})
+
 	t.Run("Fact Slots", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

@@ -196,3 +196,8 @@ func (f *ImpliedFact) Extend(values []interface{}) error {
 	}
 	return nil
 }
+
+// Extract unmarshals this fact into the user provided object
+func (f *ImpliedFact) Extract(retval interface{}) error {
+	return f.ExtractSlot(retval, "")
+}

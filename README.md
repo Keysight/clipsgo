@@ -2,16 +2,14 @@
 
 A Go wrapper for CLIPS, inspired by [clipspy](https://clipspy.readthedocs.io/en/latest/) and implemented using [cgo](https://golang.org/cmd/cgo/).
 
-
-
 ## Design
 
 CLIPSgo attempts to follow closely the model defined by clipspy. Anyone familiar with clipspy should find clipsgo fairly straightforward to understand. That said there are a few notable areas of differences.
 
-* Because Go is type safe, some APIs work differently out of necessity
-* clipsgo adds a `SendCommand` call inspired by [pyclips](http://pyclips.sourceforge.net/web/?q=node/13), enabling an interactive shell.
-* clipsgo includes a `Shell()` API call based on this that opens an interactive shell, and includes readline-style history and syntax highlighting
-* clipsgo builds into an executable that simply acts as an interactive CLIPS shell
+- Because Go is type safe, some APIs work differently out of necessity
+- clipsgo adds a `SendCommand` call inspired by [pyclips](http://pyclips.sourceforge.net/web/?q=node/13), enabling an interactive shell.
+- clipsgo includes a `Shell()` API call based on this that opens an interactive shell, and includes readline-style history and syntax highlighting
+- clipsgo builds into an executable that simply acts as an interactive CLIPS shell
 
 ## Interactive use
 
@@ -99,9 +97,10 @@ object which will be filled in by clipsgo.
 
 Matching the name of the struct field to the slot name is determined by the
 following rules:
-* If the struct field has a "clips" tag, that tag is used as the slot nam.
-* Otherwise, if the struct has a "json" tag, that tag is used.
-* Otherwise the field name of the struct is used
+
+- If the struct field has a "clips" tag, that tag is used as the slot nam.
+- Otherwise, if the struct has a "json" tag, that tag is used.
+- Otherwise the field name of the struct is used
 
 Note that instances are extracted recursively; if a slot in the instance is
 an INSTANCE-ADDRESS or INSTANCE-NAME, the referred instance will also be
@@ -145,7 +144,7 @@ assert.DeepEqual(t, retval, output)
 
 ### Facts
 
-A *fact* is a list of atomic values that are either referenced positionally, for "ordered" or "implied" facts, or by name for "unordered" or "template" facts.
+A _fact_ is a list of atomic values that are either referenced positionally, for "ordered" or "implied" facts, or by name for "unordered" or "template" facts.
 
 #### Ordered Facts
 
@@ -179,6 +178,27 @@ ifact.Set(2, "c")
 ifact.Assert()
 ```
 
+Similar to instances, an ordered fact may be extracted to a user-provided structure. Extracted ordered facts will translate to a slice of interface. The user may use a more specific slice, in which case the slice will be automatically converted (if possible - note that an unordered fact need not have all values of the same type, which
+would likely lead to errors.)
+
+```go
+import (
+    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+)
+
+env := clips.CreateEnvironment()
+defer env.Delete()
+
+fact, err := env.AssertString(`(foo a b c)`)
+defer fact.Drop()
+
+var strslice []string
+err = fact.Extract(&strslice)
+assert.Equal(t, strslice, []string {
+    "a", "b", "c",
+})
+```
+
 #### Template Facts
 
 Unordered facts represent data similar to Go maps. They require a template to be defined, which provides a formal definition for what data is represented by the fact.
@@ -209,6 +229,22 @@ tfact.Set("baz", []interface{}{
 ifact.Assert()
 ```
 
+Template facts may be extracted to structs or to a map
+
+```go
+var mapvar map[string]interface{}
+err = fact.Extract(&mapvar)
+assert.NilError(t, err)
+assert.DeepEqual(t, mapvar, map[string]interface{}{
+    "bar": int64(4),
+    "baz": []interface{} {
+        Symbol("b"),
+        3,
+    },
+})
+
+```
+
 ## Evaluating CLIPS code
 
 It is possible to evaluate CLIPS statements, retrieving their results in Go.
@@ -226,7 +262,7 @@ defer env.Delete()
 ret, err := env.Eval("(create$ foo bar baz)")
 ```
 
-*Note that this functionality relies on CLIPS `eval` function, which does not accept aribtrary commands. It does not allow CLIPS constructs to be created for example - for that you need `env.Build()`. It also does not allow facts to be asserted - use `env.AssertString()`*
+_Note that this functionality relies on CLIPS `eval` function, which does not accept aribtrary commands. It does not allow CLIPS constructs to be created for example - for that you need `env.Build()`. It also does not allow facts to be asserted - use `env.AssertString()`_
 
 The return from Eval is interface{}, since it is not possible to know in advance what kind of data will be returned.
 
@@ -365,7 +401,9 @@ Once CLIPS is built and available, subsequent builds can be done with a simple `
 ## Reference documentation
 
 The code has [Godoc](https://godoc.org/golang.org/x/tools/cmd/godoc) throughout. To view them, run
+
 ```bash
 $ godoc -http=:6060
 ```
+
 Then access http://localhost:6060/ from your browser

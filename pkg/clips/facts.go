@@ -48,6 +48,9 @@ type Fact interface {
 
 	// ExtractSlot unmarshals the given slot into the user provided object
 	ExtractSlot(retval interface{}, slotname string) error
+
+	// Extract unmarshals the full fact into the user provided object
+	Extract(retval interface{}) error
 }
 
 // Facts returns a slice of all facts known to CLIPS

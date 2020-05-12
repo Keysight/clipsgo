@@ -105,6 +105,32 @@ func TestTemplateFact(t *testing.T) {
 		})
 	})
 
+	t.Run("Fact Extract", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build("(deftemplate foo (slot bar) (multislot baz))")
+		assert.NilError(t, err)
+
+		fact, err := env.AssertString(`(foo (bar 4) (baz a b c))`)
+		defer fact.Drop()
+		assert.NilError(t, err)
+
+		type Foo struct {
+			Bar int      `clips:"bar"`
+			Baz []string `clips:"baz"`
+		}
+		var foovar Foo
+		err = fact.Extract(&foovar)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, foovar, Foo{
+			Bar: 4,
+			Baz: []string{
+				"a", "b", "c",
+			},
+		})
+	})
+
 	t.Run("Fact Retract", func(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()

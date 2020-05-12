@@ -175,3 +175,12 @@ func (f *TemplateFact) Set(slot string, value interface{}) error {
 	}
 	return nil
 }
+
+// Extract unmarshals this fact into the user provided object
+func (f *TemplateFact) Extract(retval interface{}) error {
+	slots, err := f.Slots()
+	if err != nil {
+		return err
+	}
+	return f.env.structuredExtract(retval, slots, false)
+}

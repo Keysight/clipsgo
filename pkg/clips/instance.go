@@ -6,9 +6,7 @@ package clips
 import "C"
 import (
 	"fmt"
-	"reflect"
 	"runtime"
-	"strings"
 	"unsafe"
 )
 
@@ -282,84 +280,6 @@ func (inst *Instance) ExtractSlot(retval interface{}, name string) error {
 // The return value can be a struct or a map of string to another datatype. If retval points
 // to a valid object, that object will be populated. If it is not, one will be created
 func (inst *Instance) Extract(retval interface{}) error {
-	ptr := reflect.ValueOf(retval)
-	if ptr.Kind() != reflect.Ptr {
-		return fmt.Errorf("Unable to store data to non-pointer type")
-	}
-	if ptr.IsNil() || !ptr.IsValid() {
-		return fmt.Errorf("Unable to store data to nil value")
-	}
-
-	val := reflect.Indirect(ptr.Elem())
-	if !val.IsValid() {
-		val = reflect.New(ptr.Type().Elem().Elem())
-		ptr.Elem().Set(val)
-		val = val.Elem()
-	}
-	typ := val.Type()
-
 	slots := inst.Slots(true)
-	switch val.Kind() {
-	case reflect.Interface:
-		val = reflect.ValueOf(make(map[string]interface{}))
-		ptr.Elem().Set(val)
-		typ = val.Type()
-		fallthrough
-	case reflect.Map:
-		if typ.Key().Kind() != reflect.String {
-			return fmt.Errorf("Key type must be type string")
-		}
-		if val.IsNil() {
-			val = reflect.MakeMap(reflect.MapOf(typ.Key(), typ.Elem()))
-			ptr.Elem().Set(val)
-		}
-		for k, v := range slots {
-			newval := reflect.Indirect(reflect.New(typ.Elem()))
-			if err := inst.env.convertArg(newval, reflect.ValueOf(v), true); err != nil {
-				return err
-			}
-			val.SetMapIndex(reflect.ValueOf(k), newval)
-		}
-	case reflect.Struct:
-		for ii := 0; ii < typ.NumField(); ii++ {
-			field := typ.Field(ii)
-			fieldval := val.Field(ii)
-
-			if err := inst.env.fillStruct(fieldval, field, slots); err != nil {
-				return err
-			}
-		}
-	default:
-		return fmt.Errorf("Unable to extract CLIPS instance to %v", typ.String())
-	}
-
-	return nil
-}
-
-func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructField, slots map[string]interface{}) error {
-	if field.Anonymous {
-		embedType := fieldval.Type()
-		// treat fields of the anonymous class just like they are native
-		for ii := 0; ii < fieldval.NumField(); ii++ {
-			if err := env.fillStruct(fieldval.Field(ii), embedType.Field(ii), slots); err != nil {
-				return err
-			}
-		}
-	}
-
-	// decide the CLIPS slot name based on tag
-	var slotname string
-	if tag, ok := field.Tag.Lookup("clips"); ok {
-		slotname = tag
-	} else if tag, ok := field.Tag.Lookup("json"); ok {
-		slotname = strings.Split(tag, ",")[0]
-	} else {
-		slotname = field.Name
-	}
-
-	fielddata, ok := slots[slotname]
-	if !ok {
-		return nil
-	}
-	return env.convertArg(fieldval.Addr(), reflect.ValueOf(fielddata), true)
+	return inst.env.structuredExtract(retval, slots, true)
 }
