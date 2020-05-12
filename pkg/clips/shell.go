@@ -2,6 +2,7 @@ package clips
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -545,6 +546,9 @@ func (env *Environment) Shell() {
 	initContext(env)
 
 	writer := &HighlightedWriter{delegate: prompt.NewStandardOutputWriter()}
+	// go-prompt screws with the log destination, so make sure it gets put back
+	logout := log.Writer()
+	defer log.SetOutput(logout)
 	p := prompt.New(
 		executor,
 		completer,
