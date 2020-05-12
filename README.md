@@ -17,7 +17,7 @@ CLIPSgo attempts to follow closely the model defined by clipspy. Anyone familiar
 
 You may run clipsgo directly in order to use an interactive shell.
 
-![shell](interactive.png)
+![shell](assets/interactive.png)
 
 Also, in your clipsgo-based programs, you may set up an environment that includes Go-based functions and / or is preloaded with data, then open an interactive session within that environment.
 
