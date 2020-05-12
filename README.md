@@ -103,6 +103,10 @@ following rules:
 * Otherwise, if the struct has a "json" tag, that tag is used.
 * Otherwise the field name of the struct is used
 
+Note that instances are extracted recursively; if a slot in the instance is
+an INSTANCE-ADDRESS or INSTANCE-NAME, the referred instance will also be
+extracted as structured data
+
 ```go
 err := env.Build(`(defclass Foo (is-a USER)
     (slot Int (type INTEGER))
