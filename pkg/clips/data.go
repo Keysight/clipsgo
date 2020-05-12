@@ -364,17 +364,6 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		output.Set(val)
 		val = val.Elem()
 	}
-	needType := val.Type()
-
-	if !data.IsValid() {
-		switch val.Kind() {
-		case reflect.Ptr, reflect.Interface:
-			val.Set(reflect.Zero(needType))
-			return nil
-		default:
-			return fmt.Errorf("Unable to convert nil value to non-pointer type")
-		}
-	}
 
 	if extractClasses {
 		dif := data.Interface()
@@ -382,30 +371,58 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		var err error
 		instname, ok := dif.(InstanceName)
 		if ok {
-			subinst, err = env.FindInstance(instname, "")
-			if err != nil {
-				return err
+			if instname == "nil" {
+				// it's not an instance we can look up, it's just nil
+				subinst = nil
+			} else {
+				subinst, err = env.FindInstance(instname, "")
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			subinst, ok = dif.(*Instance)
 		}
 		if ok {
-			// extract the instance
-			return subinst.Extract(output.Addr().Interface())
+			if subinst == nil {
+				data = reflect.ValueOf(nil)
+			} else {
+				// extract the instance
+				return subinst.Extract(val.Addr().Interface())
+			}
 		}
 	}
 
-	haveType := data.Type()
-	if haveType.AssignableTo(needType) {
+	if !data.IsValid() {
+		switch val.Kind() {
+		case reflect.Ptr, reflect.Interface:
+			val.Set(reflect.Zero(val.Type()))
+			return nil
+		default:
+			return fmt.Errorf("Unable to convert nil value to non-pointer type %v", val.Type())
+		}
+	}
+
+	if val.Kind() == reflect.Ptr && data.Kind() != reflect.Ptr {
+		// if we were handed a pointer, make sure it points to something and then set that thing
+		newval := reflect.Indirect(val)
+		if !newval.IsValid() {
+			newval = reflect.New(val.Type().Elem())
+		}
+		val.Set(newval)
+		val = val.Elem()
+	}
+
+	if data.Type().AssignableTo(val.Type()) {
 		val.Set(data)
 		return nil
 	}
 
-	if haveType.Kind() == reflect.Int64 {
+	if data.Type().Kind() == reflect.Int64 {
 		// Make an exception when it's just loss of scale, and make it work
 		intval := data.Int()
 		var checkval int64
-		switch needType.Kind() {
+		switch val.Type().Kind() {
 		case reflect.Int64:
 			// no check needed
 		case reflect.Int:
@@ -427,16 +444,16 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		case reflect.Uint8:
 			checkval = int64(uint8(intval))
 		default:
-			return fmt.Errorf(`Invalid type "%v", expected "%v"`, haveType, needType)
+			return fmt.Errorf(`Invalid type "%v", expected "%v"`, data.Type(), val.Type())
 		}
 		if checkval != intval {
 			return fmt.Errorf(`Integer %d too large`, intval)
 		}
 		val.SetInt(checkval)
 		return nil
-	} else if haveType.Kind() == reflect.Float64 {
+	} else if data.Type().Kind() == reflect.Float64 {
 		floatval := data.Float()
-		switch needType.Kind() {
+		switch val.Type().Kind() {
 		case reflect.Float64:
 			// no check needed
 		case reflect.Float32:
@@ -444,13 +461,13 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 				return fmt.Errorf(`Floating point %f too precise to represent`, floatval)
 			}
 		default:
-			return fmt.Errorf(`Invalid type "%v", expected "%v"`, haveType, needType)
+			return fmt.Errorf(`Invalid type "%v", expected "%v"`, data.Type(), val.Type())
 		}
 		val.SetFloat(floatval)
 		return nil
-	} else if haveType.Kind() == reflect.Slice && needType.Kind() == reflect.Slice {
+	} else if data.Type().Kind() == reflect.Slice && val.Type().Kind() == reflect.Slice {
 		// see if we can translate to right kind of slice
-		eNeedType := needType.Elem()
+		eNeedType := val.Type().Elem()
 		slice := reflect.MakeSlice(reflect.SliceOf(eNeedType), data.Len(), data.Len())
 		for i := 0; i < data.Len(); i++ {
 			// what we get from CLIPS is always []interface{}, so there's no check for that here
@@ -461,11 +478,11 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		}
 		val.Set(slice)
 		return nil
-	} else if haveType.ConvertibleTo(needType) {
+	} else if data.Type().ConvertibleTo(val.Type()) {
 		// This could actually handle ints and floats, too, except it hides wraparound and loss of precision
-		converted := data.Convert(needType)
+		converted := data.Convert(val.Type())
 		val.Set(converted)
 		return nil
 	}
-	return fmt.Errorf(`Invalid type "%v", expected "%v"`, haveType, needType)
+	return fmt.Errorf(`Invalid type "%v", expected "%v"`, data.Type(), val.Type())
 }

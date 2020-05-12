@@ -331,7 +331,9 @@ func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructF
 		embedType := fieldval.Type()
 		// treat fields of the anonymous class just like they are native
 		for ii := 0; ii < fieldval.NumField(); ii++ {
-			env.fillStruct(fieldval.Field(ii), embedType.Field(ii), slots)
+			if err := env.fillStruct(fieldval.Field(ii), embedType.Field(ii), slots); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -349,5 +351,5 @@ func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructF
 	if !ok {
 		return nil
 	}
-	return env.convertArg(fieldval, reflect.ValueOf(fielddata), true)
+	return env.convertArg(fieldval.Addr(), reflect.ValueOf(fielddata), true)
 }

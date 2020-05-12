@@ -777,4 +777,94 @@ func TestExtract(t *testing.T) {
 		// existing ref should have been updated, not replaced
 		assert.DeepEqual(t, &fooval, output.FooVal, cmpopts.IgnoreUnexported(*output.FooVal))
 	})
+
+	t.Run("Nested to map by name", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot sym (type SYMBOL))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		err = env.Build(`(defclass Bar (is-a USER)
+			(slot foo (type INSTANCE-NAME) (allowed-classes Foo))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(fooinst of Foo (sym bar) (ms a b c))`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(barinst of Bar)`)
+		assert.NilError(t, err)
+
+		_, err = env.Eval(`(send [barinst] put-foo [fooinst])`)
+		assert.NilError(t, err)
+
+		output := map[string]interface{}{
+			"foo": map[string]interface{}{
+				"sym": Symbol("bar"),
+				"ms": []interface{}{
+					Symbol("a"),
+					Symbol("b"),
+					Symbol("c"),
+				},
+			},
+			"ms": []interface{}{},
+		}
+
+		// starting from nil
+		var retval map[string]interface{}
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output)
+
+		// populating an existing map
+		retval = make(map[string]interface{})
+		retval2 := retval
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval2, output)
+	})
+
+	t.Run("Nested to map nil ref", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot sym (type SYMBOL))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		err = env.Build(`(defclass Bar (is-a USER)
+			(slot foo (type INSTANCE-NAME) (allowed-classes Foo))
+			(multislot ms)
+		)`)
+		assert.NilError(t, err)
+
+		inst, err := env.MakeInstance(`(barinst of Bar)`)
+		assert.NilError(t, err)
+
+		output := map[string]interface{}{
+			"foo": nil,
+			"ms":  []interface{}{},
+		}
+
+		// starting from nil
+		var retval map[string]interface{}
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval, output)
+
+		// populating an existing map
+		retval = make(map[string]interface{})
+		retval2 := retval
+		err = inst.Extract(&retval)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, retval2, output)
+	})
+
 }
