@@ -182,8 +182,19 @@ func (cl *Class) WatchSlots(val bool) {
 	C.EnvSetDefclassWatchSlots(cl.env.env, flag, cl.clptr)
 }
 
-// NewInstance creates a new, uninitialized instance of this class
-func (cl *Class) NewInstance(name string) (*Instance, error) {
+// NewInstance creates an instance of this class. If skipInit is true, a new,
+// uninitialized instance of this class. Slots will be unset until the caller
+// calls SetSlot on each one.
+func (cl *Class) NewInstance(name string, skipInit bool) (*Instance, error) {
+	if !skipInit {
+		var cmd string
+		if name == "" {
+			cmd = fmt.Sprintf("(of %s)", cl.Name())
+		} else {
+			cmd = fmt.Sprintf("(%s of %s)", name, cl.Name())
+		}
+		return cl.env.MakeInstance(cmd)
+	}
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 	instptr := C.EnvCreateRawInstance(cl.env.env, cl.clptr, cname)

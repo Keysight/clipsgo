@@ -137,15 +137,33 @@ func TestClass(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		err := env.Build(`(defclass Foo (is-a USER) (slot bar) (multislot baz))`)
+		err := env.Build(`(defclass Foo (is-a USER) (slot bar (type INTEGER)) (multislot baz))`)
 		assert.NilError(t, err)
 
 		class, err := env.FindClass("Foo")
 		assert.NilError(t, err)
 
-		inst, err := class.NewInstance("named")
+		inst, err := class.NewInstance("named", false)
 		assert.NilError(t, err)
 		assert.Equal(t, inst.Name(), InstanceName("named"))
+		initval, err := inst.Slot("bar")
+		assert.NilError(t, err)
+		assert.Equal(t, initval, int64(0))
+
+		inst, err = class.NewInstance("named", true)
+		assert.NilError(t, err)
+		assert.Equal(t, inst.Name(), InstanceName("named"))
+
+		// try and retrieve an uninitialized slot
+		ret, err := inst.Slot("bar")
+		assert.NilError(t, err)
+		assert.Equal(t, ret, nil)
+
+		// now initialize it
+		inst.SetSlot("bar", 7)
+		ret, err = inst.Slot("bar")
+		assert.NilError(t, err)
+		assert.Equal(t, ret, int64(7))
 	})
 
 	t.Run("MessageHandlers", func(t *testing.T) {

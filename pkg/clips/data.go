@@ -167,31 +167,33 @@ func (do *DataObject) Value() interface{} {
 	return do.goValue(dtype, dvalue)
 }
 
-func (do *DataObject) clipsTypeFor(v interface{}) Type {
-	if v == nil {
+func clipsTypeFor(typ reflect.Type) Type {
+	if typ == nil {
 		return SYMBOL
 	}
-	switch v.(type) {
-	case bool, Symbol:
+	switch typ.Kind() {
+	case reflect.Bool:
 		return SYMBOL
-	case int, int8, int16, int32, int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return INTEGER
-	case float32, float64:
+	case reflect.Float32, reflect.Float64:
 		return FLOAT
-	case unsafe.Pointer:
-		return EXTERNAL_ADDRESS
-	case InstanceName:
-		return INSTANCE_NAME
-	case string:
-		return STRING
-	case *ImpliedFact, *TemplateFact:
-		return FACT_ADDRESS
-	case *Instance:
-		return INSTANCE_ADDRESS
+	case reflect.Array, reflect.Slice:
+		return MULTIFIELD
 	default:
-		switch reflect.TypeOf(v).Kind() {
-		case reflect.Array, reflect.Slice:
-			return MULTIFIELD
+		switch typ {
+		case reflect.TypeOf(""):
+			return STRING
+		case reflect.TypeOf((*Symbol)(nil)).Elem():
+			return SYMBOL
+		case reflect.TypeOf(unsafe.Pointer(nil)):
+			return EXTERNAL_ADDRESS
+		case reflect.TypeOf((*InstanceName)(nil)).Elem():
+			return INSTANCE_NAME
+		case reflect.TypeOf((*ImpliedFact)(nil)), reflect.TypeOf((*TemplateFact)(nil)):
+			return FACT_ADDRESS
+		case reflect.TypeOf((*Instance)(nil)):
+			return INSTANCE_ADDRESS
 		}
 	}
 	return SYMBOL
@@ -201,7 +203,7 @@ func (do *DataObject) clipsTypeFor(v interface{}) Type {
 func (do *DataObject) SetValue(value interface{}) {
 	var dtype Type
 	if do.typ < 0 {
-		dtype = do.clipsTypeFor(value)
+		dtype = clipsTypeFor(reflect.TypeOf(value))
 	} else {
 		dtype = do.typ
 	}
@@ -333,7 +335,7 @@ func (do *DataObject) listToMultifield(values []interface{}) unsafe.Pointer {
 	ret := C.EnvCreateMultifield(do.env.env, size)
 	multifield := C.multifield_ptr(ret)
 	for i, v := range values {
-		C.set_multifield_type(multifield, C.long(i+1), C.short(do.clipsTypeFor(v)))
+		C.set_multifield_type(multifield, C.long(i+1), C.short(clipsTypeFor(reflect.TypeOf(v))))
 		C.set_multifield_value(multifield, C.long(i+1), do.clipsValue(v))
 	}
 	C.set_data_begin(do.data, 1)
@@ -370,7 +372,7 @@ func safeIndirect(output reflect.Value) reflect.Value {
 func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
 	val := safeIndirect(output)
 
-	if extractClasses {
+	if extractClasses && data.IsValid() {
 		dif := data.Interface()
 		var subinst *Instance
 		var err error
@@ -580,19 +582,20 @@ func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructF
 		}
 	}
 
-	// decide the CLIPS slot name based on tag
-	var slotname string
-	if tag, ok := field.Tag.Lookup("clips"); ok {
-		slotname = tag
-	} else if tag, ok := field.Tag.Lookup("json"); ok {
-		slotname = strings.Split(tag, ",")[0]
-	} else {
-		slotname = field.Name
-	}
-
-	fielddata, ok := slots[slotname]
+	fielddata, ok := slots[slotNameFor(field)]
 	if !ok {
 		return nil
 	}
 	return env.convertArg(fieldval.Addr(), reflect.ValueOf(fielddata), extractClasses)
+}
+
+// decide the CLIPS slot name based on tag
+func slotNameFor(field reflect.StructField) string {
+	if tag, ok := field.Tag.Lookup("clips"); ok {
+		return tag
+	}
+	if tag, ok := field.Tag.Lookup("json"); ok {
+		return strings.Split(tag, ",")[0]
+	}
+	return field.Name
 }
