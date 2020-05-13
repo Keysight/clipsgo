@@ -27,29 +27,25 @@ func (env *Environment) InsertClass(basis interface{}) (*Class, error) {
 		return nil, err
 	}
 
-	/* TODO
 	if err := env.insertShadowMessages(typ); err != nil {
 		return nil, err
 	}
-	*/
 
 	return env.FindClass(classname)
 }
 
 func (env *Environment) insertShadowClass(typ reflect.Type) error {
 	var defclass strings.Builder
-	fmt.Fprintf(&defclass, "(defclass %s (is-a USER)\n", classname)
+	fmt.Fprintf(&defclass, "(defclass %s (is-a USER)\n", typ.Name())
 	for ii := 0; ii < typ.NumField(); ii++ {
 		field := typ.Field(ii)
 
 		if err := env.defclassSlots(&defclass, field); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	fmt.Fprint(&defclass, ")")
-	if err := env.Build(defclass.String()); err != nil {
-		return err
-	}
+	return env.Build(defclass.String())
 }
 
 func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.StructField) error {
@@ -104,5 +100,9 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 		clipsSubtype = clipsTypeFor(field.Type.Elem()).String()
 	}
 	fmt.Fprintf(defclass, "    (multislot %s (type %s))\n", slotNameFor(field), clipsSubtype)
+	return nil
+}
+
+func (env *Environment) insertShadowMessages(typ reflect.Type) error {
 	return nil
 }

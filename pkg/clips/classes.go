@@ -184,7 +184,7 @@ func (cl *Class) WatchSlots(val bool) {
 
 // NewInstance creates an instance of this class. If skipInit is true, a new,
 // uninitialized instance of this class. Slots will be unset until the caller
-// calls SetSlot on each one.
+// calls SetSlot on each one, or calls (initialize-instance [instname])
 func (cl *Class) NewInstance(name string, skipInit bool) (*Instance, error) {
 	if !skipInit {
 		var cmd string
@@ -194,6 +194,11 @@ func (cl *Class) NewInstance(name string, skipInit bool) (*Instance, error) {
 			cmd = fmt.Sprintf("(%s of %s)", name, cl.Name())
 		}
 		return cl.env.MakeInstance(cmd)
+	}
+	if name == "" {
+		if err := cl.env.ExtractEval(&name, "(gensym)"); err != nil {
+			return nil, err
+		}
 	}
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))

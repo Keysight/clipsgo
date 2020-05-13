@@ -91,6 +91,76 @@ assert.Equal(t, ret, int64(12))
 ret := inst.Send("handler", "")
 ```
 
+#### Insert
+
+A user-defined struct may be "inserted" as a class and / or instance in
+CLIPS. The term "Insert" is taken from DROOLS, although unlike DROOLS
+no long-term link between the user struct and the CLIPS instance
+is retained. The data is simply copied in.
+
+A nil pointer to a struct type is sufficient to insert a class. Inserting a
+class will result in building a defclass construct in CLIPS that represents
+the fields of the struct. If the struct contains structs, or pointers to
+structs, these will become slots of type INSTANCE-NAME, and the struct
+that is referred will also be inserted.
+
+```go
+type ChildClass struct {
+    Intval   *int
+    Floatval *float64
+}
+type ParentClass struct {
+    Str   string
+    Child ChildClass
+}
+var template *ParentClass
+
+cls, err := env.InsertClass(template)
+assert.NilError(t, err)
+assert.Equal(t, cls.String(), `(defclass MAIN::ParentClass
+   (is-a USER)
+   (slot Str
+      (type STRING))
+   (slot Child
+      (type INSTANCE-NAME)
+      (allowed-classes ChildClass)))`)
+```
+
+When an instance is inserted, a class for that data type will implicitly be
+inserted if no class by that name already exists. If a class already exists,
+it will be used as-is (and may not match the fields of the given data,
+causing an error, if it was created by some other means.)
+
+```go
+type ChildClass struct {
+    Intval   *int
+    Floatval *float64
+}
+type ParentClass struct {
+    Str   string
+    Child ChildClass
+}
+intval := 99
+floatval := 107.0
+template := ParentClass{
+    Str: "with actual value",
+    Child: ChildClass{
+        Intval:   &intval,
+        Floatval: &floatval,
+    },
+}
+
+inst, err := env.Insert("", template)
+assert.NilError(t, err)
+assert.Equal(t, inst.String(), `[gen1] of ParentClass (Str "with actual value") (Child [gen2])`)
+
+subinst, err := env.FindInstance("gen2", "")
+assert.NilError(t, err)
+assert.Equal(t, subinst.String(), `[gen2] of ChildClass (Intval 99) (Floatval 107.0)`)
+```
+
+#### Extract
+
 An instance can also be "extracted" as either a struct or a map. This
 functionality is somewhat analogous to json.Unmarshal. The caller supplies an
 object which will be filled in by clipsgo.
