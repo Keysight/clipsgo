@@ -977,4 +977,39 @@ func TestExtract(t *testing.T) {
 		assert.DeepEqual(t, retval2, output)
 	})
 
+	t.Run("implicit extract in function call", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		err := env.Build(`(defclass Foo (is-a USER)
+			(slot Int (type INTEGER))
+			(slot Float (type FLOAT))
+			(slot Sym (type SYMBOL))
+			(multislot MS))
+		`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(fooinst of Foo (Int 12) (Float 28.0) (Sym bar) (MS a b c))`)
+		assert.NilError(t, err)
+
+		type Foo struct {
+			private   int
+			IntVal    int     `json:"Int"`
+			FloatVal  float64 `clips:"Float"`
+			Sym       Symbol
+			MultiSlot []interface{} `json:"MS,omitempty"`
+		}
+
+		callback := func(fooval *Foo) bool {
+			return fooval != nil && fooval.IntVal == 12 && fooval.FloatVal == 28.0 && fooval.Sym == Symbol("bar")
+		}
+
+		err = env.DefineFunction("check", callback)
+		assert.NilError(t, err)
+
+		// in-place
+		ret, err := env.Eval(`(check [fooinst])`)
+		assert.NilError(t, err)
+		assert.Equal(t, ret, true)
+	})
 }

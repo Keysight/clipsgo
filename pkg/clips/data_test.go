@@ -650,7 +650,7 @@ func TestDataIntoClips(t *testing.T) {
 		env := CreateEnvironment()
 		defer env.Delete()
 
-		callback := func(arg interface{}) interface{} {
+		callback := func(arg *Instance) *Instance {
 			return arg
 		}
 		err := env.DefineFunction("test-callback", callback)

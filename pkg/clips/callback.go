@@ -85,7 +85,7 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 		}
 		paramVal := reflect.New(needType).Elem()
 		arg := temp.Value()
-		err := env.convertArg(paramVal, reflect.ValueOf(arg), false)
+		err := env.convertArg(paramVal, reflect.ValueOf(arg), true)
 		if err != nil {
 			printError(env, fmt.Sprintf("error calling function %s: %v", funcname, err.Error()))
 			return

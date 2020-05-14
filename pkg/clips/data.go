@@ -361,6 +361,14 @@ func (do *DataObject) MustExtractValue(retval interface{}, extractClasses bool) 
 }
 
 func safeIndirect(output reflect.Value) reflect.Value {
+	switch output.Type() {
+	// pointers to our own Instance, ImpliedFact, or TemplateFact don't need to use Indirect()
+	case reflect.TypeOf((*Instance)(nil)),
+		reflect.TypeOf((*ImpliedFact)(nil)),
+		reflect.TypeOf((*TemplateFact)(nil)):
+		return output
+	}
+	// pointers to user data need Indirect, to get a valid value
 	val := reflect.Indirect(output)
 	if !val.IsValid() {
 		val = reflect.New(output.Type().Elem())
@@ -369,33 +377,36 @@ func safeIndirect(output reflect.Value) reflect.Value {
 	}
 	return val
 }
+
 func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
 	val := safeIndirect(output)
 
 	if extractClasses && data.IsValid() {
-		dif := data.Interface()
-		var subinst *Instance
-		var err error
-		instname, ok := dif.(InstanceName)
-		if ok {
-			if instname == "nil" {
-				// it's not an instance we can look up, it's just nil
-				subinst = nil
-			} else {
-				subinst, err = env.FindInstance(instname, "")
-				if err != nil {
-					return err
+		if output.Type() != reflect.TypeOf(InstanceName("")) && output.Type() != reflect.TypeOf((*Instance)(nil)) {
+			dif := data.Interface()
+			var subinst *Instance
+			var err error
+			instname, ok := dif.(InstanceName)
+			if ok {
+				if instname == "nil" {
+					// it's not an instance we can look up, it's just nil
+					subinst = nil
+				} else {
+					subinst, err = env.FindInstance(instname, "")
+					if err != nil {
+						return err
+					}
 				}
-			}
-		} else {
-			subinst, ok = dif.(*Instance)
-		}
-		if ok {
-			if subinst == nil {
-				data = reflect.ValueOf(nil)
 			} else {
-				// extract the instance
-				return subinst.Extract(val.Addr().Interface())
+				subinst, ok = dif.(*Instance)
+			}
+			if ok {
+				if subinst == nil {
+					data = reflect.ValueOf(nil)
+				} else {
+					// extract the instance
+					return subinst.Extract(val.Addr().Interface())
+				}
 			}
 		}
 	}
