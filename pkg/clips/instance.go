@@ -6,6 +6,7 @@ package clips
 import "C"
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 	"unsafe"
 )
@@ -213,6 +214,18 @@ func (inst *Instance) slotValue(name string) interface{} {
 
 // SetSlot sets the slot to the given value. Warning, this function bypasses message-passing
 func (inst *Instance) SetSlot(name string, value interface{}) error {
+	typ := reflect.TypeOf(value)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	if typ.Kind() == reflect.Struct {
+		// need to insert the struct first, then store its INSTANCE-NAME
+		subinst, err := inst.env.Insert("", value)
+		if err != nil {
+			return err
+		}
+		value = subinst.Name()
+	}
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 	data := createDataObject(inst.env)
