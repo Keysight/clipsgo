@@ -33,7 +33,7 @@ func (env *Environment) FindFunction(name string) (*Function, error) {
 	defer C.free(unsafe.Pointer(cname))
 	fptr := C.EnvFindDeffunction(env.env, cname)
 	if fptr == nil {
-		return nil, fmt.Errorf(`Function "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Function "%s" not found`, name))
 	}
 	return createFunction(env, fptr), nil
 }

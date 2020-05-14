@@ -135,6 +135,12 @@ func TestDataFromClips(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, int8val, int8(12))
 
+		type Special int8
+		var sval Special
+		err = env.ExtractEval(&sval, inputval)
+		assert.NilError(t, err)
+		assert.Equal(t, sval, Special(12))
+
 		floatval := 5.0
 		err = env.ExtractEval(&floatval, inputval)
 		assert.ErrorContains(t, err, "Invalid type")
@@ -160,6 +166,12 @@ func TestDataFromClips(t *testing.T) {
 		err = env.ExtractEval(&stringval, inputval)
 		assert.NilError(t, err)
 		assert.Equal(t, stringval, outputval)
+
+		type Specialized string
+		var sval Specialized
+		err = env.ExtractEval(&sval, inputval)
+		assert.NilError(t, err)
+		assert.Equal(t, sval, Specialized(outputval))
 
 		intval := 5
 		err = env.ExtractEval(&intval, inputval)
@@ -490,6 +502,23 @@ func TestDataIntoClips(t *testing.T) {
 
 		callback := func() interface{} {
 			return "Test String"
+		}
+
+		err := env.DefineFunction("test-callback", callback)
+		assert.NilError(t, err)
+
+		ret, err := env.Eval("(test-callback)")
+		assert.NilError(t, err)
+		assert.Equal(t, ret, "Test String")
+	})
+
+	t.Run("Specialized String Conversion", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		type Specialized string
+		callback := func() Specialized {
+			return Specialized("Test String")
 		}
 
 		err := env.DefineFunction("test-callback", callback)

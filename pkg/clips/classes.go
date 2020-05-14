@@ -81,7 +81,7 @@ func (env *Environment) FindClass(name string) (*Class, error) {
 	defer C.free(unsafe.Pointer(cname))
 	clptr := C.EnvFindDefclass(env.env, cname)
 	if clptr == nil {
-		return nil, fmt.Errorf(`Class "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Class "%s" not found`, name))
 	}
 	return createClass(env, clptr), nil
 }
@@ -295,7 +295,7 @@ func (cl *Class) Slot(name string) (*ClassSlot, error) {
 			return slot, nil
 		}
 	}
-	return nil, fmt.Errorf(`Slot "%s" not found`, name)
+	return nil, NotFoundError(fmt.Errorf(`Slot "%s" not found`, name))
 }
 
 // Instances returns the list of instances of this class

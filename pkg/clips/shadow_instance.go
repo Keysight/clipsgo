@@ -17,12 +17,13 @@ func (env *Environment) Insert(name string, basis interface{}) (*Instance, error
 		typ = typ.Elem()
 		val = val.Elem()
 	}
-	cls, err := env.FindClass(typ.Name())
+	classname, err := classNameFor(typ)
 	if err != nil {
-		// we didn't find it, so try and make it
-		if cls, err = env.InsertClass(basis); err != nil {
-			return nil, err
-		}
+		return nil, err
+	}
+	cls, err := env.checkRecurseClass(classname, typ)
+	if err != nil {
+		return nil, err
 	}
 	inst, err := cls.NewInstance(name, true)
 	if err != nil {

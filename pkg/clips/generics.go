@@ -40,7 +40,7 @@ func (env *Environment) FindGeneric(name string) (*Generic, error) {
 	defer C.free(unsafe.Pointer(cname))
 	genptr := C.EnvFindDefgeneric(env.env, cname)
 	if genptr == nil {
-		return nil, fmt.Errorf(`Generic "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Generic "%s" not found`, name))
 	}
 	return createGeneric(env, genptr), nil
 }

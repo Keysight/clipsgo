@@ -61,7 +61,8 @@ func (env *Environment) insertShadowClass(classname string, typ reflect.Type) er
 		}
 	}
 	fmt.Fprint(&defclass, ")")
-	return env.Build(defclass.String())
+	buildcmd := defclass.String()
+	return env.Build(buildcmd)
 }
 
 func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.StructField) error {
@@ -87,7 +88,7 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 		if err != nil {
 			return err
 		}
-		if err = env.checkRecurseClass(classname, fieldtype); err != nil {
+		if _, err = env.checkRecurseClass(classname, fieldtype); err != nil {
 			return err
 		}
 		fmt.Fprintf(defclass, "    (slot %s (type INSTANCE-NAME) (allowed-classes %s))\n", slotNameFor(field), classname)
@@ -114,7 +115,7 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 		if err != nil {
 			return err
 		}
-		if err = env.checkRecurseClass(classname, subtype); err != nil {
+		if _, err = env.checkRecurseClass(classname, subtype); err != nil {
 			return err
 		}
 		fmt.Fprintf(defclass, "    (multislot %s (type INSTANCE-NAME) (allowed-classes %s))\n", slotNameFor(field), subtype.Name())
@@ -126,13 +127,16 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 	return nil
 }
 
-func (env *Environment) checkRecurseClass(classname string, fieldtype reflect.Type) error {
-	_, err := env.FindClass(classname)
+func (env *Environment) checkRecurseClass(classname string, fieldtype reflect.Type) (*Class, error) {
+	cls, err := env.FindClass(classname)
 	if err != nil {
+		if _, ok := err.(NotFoundError); !ok {
+			return nil, err
+		}
 		// need to recurse
-		if _, err := env.InsertClass(reflect.Zero(reflect.PtrTo(fieldtype)).Interface()); err != nil {
-			return err
+		if cls, err = env.InsertClass(reflect.Zero(reflect.PtrTo(fieldtype)).Interface()); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return cls, nil
 }

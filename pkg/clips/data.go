@@ -196,6 +196,10 @@ func clipsTypeFor(typ reflect.Type) Type {
 			return INSTANCE_ADDRESS
 		}
 	}
+	if typ.Kind() == reflect.String {
+		// If we got here, it's a string but not one of our special cases (Symbol, InstanceName)
+		return STRING
+	}
 	return SYMBOL
 }
 
@@ -256,35 +260,8 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 		return C.EnvAddSymbol(do.env.env, vstr)
 	}
 	switch v := dvalue.(type) {
-	case bool:
-		if v {
-			vstr := C.CString("TRUE")
-			defer C.free(unsafe.Pointer(vstr))
-			return C.EnvAddSymbol(do.env.env, vstr)
-		}
-		vstr := C.CString("FALSE")
-		defer C.free(unsafe.Pointer(vstr))
-		return C.EnvAddSymbol(do.env.env, vstr)
-	case int:
-		return C.EnvAddLong(do.env.env, C.longlong(v))
-	case int8:
-		return C.EnvAddLong(do.env.env, C.longlong(v))
-	case int16:
-		return C.EnvAddLong(do.env.env, C.longlong(v))
-	case int32:
-		return C.EnvAddLong(do.env.env, C.longlong(v))
-	case int64:
-		return C.EnvAddLong(do.env.env, C.longlong(v))
-	case float32:
-		return C.EnvAddDouble(do.env.env, C.double(v))
-	case float64:
-		return C.EnvAddDouble(do.env.env, C.double(v))
 	case unsafe.Pointer:
 		return C.EnvAddExternalAddress(do.env.env, v, C.C_POINTER_EXTERNAL_ADDRESS)
-	case string:
-		vstr := C.CString(v)
-		defer C.free(unsafe.Pointer(vstr))
-		return C.EnvAddSymbol(do.env.env, vstr)
 	case Symbol:
 		vstr := C.CString(string(v))
 		defer C.free(unsafe.Pointer(vstr))
@@ -302,13 +279,36 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	case *Instance:
 		return v.instptr
 	}
-	if reflect.TypeOf(dvalue).Kind() == reflect.Slice || reflect.TypeOf(dvalue).Kind() == reflect.Array {
-		s := reflect.ValueOf(dvalue)
-		mvalue := make([]interface{}, s.Len())
-		for i := 0; i < s.Len(); i++ {
-			mvalue[i] = s.Index(i).Interface()
+	val := reflect.ValueOf(dvalue)
+	// We use Kind() in case of user subtypes, so they are mapped to their base type
+	switch val.Kind() {
+	case reflect.Bool:
+		v := val.Bool()
+		if v {
+			vstr := C.CString("TRUE")
+			defer C.free(unsafe.Pointer(vstr))
+			return C.EnvAddSymbol(do.env.env, vstr)
+		}
+		vstr := C.CString("FALSE")
+		defer C.free(unsafe.Pointer(vstr))
+		return C.EnvAddSymbol(do.env.env, vstr)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v := val.Int()
+		return C.EnvAddLong(do.env.env, C.longlong(v))
+	case reflect.Float32, reflect.Float64:
+		v := val.Float()
+		return C.EnvAddDouble(do.env.env, C.double(v))
+	case reflect.Slice, reflect.Array:
+		mvalue := make([]interface{}, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			mvalue[i] = val.Index(i).Interface()
 		}
 		return do.listToMultifield(mvalue)
+	case reflect.String:
+		v := val.String()
+		vstr := C.CString(v)
+		defer C.free(unsafe.Pointer(vstr))
+		return C.EnvAddSymbol(do.env.env, vstr)
 	}
 	// Fall back to FALSE in typical CLIPS style
 	vstr := C.CString("FALSE")

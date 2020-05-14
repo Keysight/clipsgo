@@ -46,14 +46,14 @@ func (env *Environment) FindInstance(name InstanceName, module string) (*Instanc
 		defer C.free(unsafe.Pointer(cmod))
 		modptr = C.EnvFindDefmodule(env.env, cmod)
 		if modptr == nil {
-			return nil, fmt.Errorf(`Module "%s" not found`, module)
+			return nil, NotFoundError(fmt.Errorf(`Module "%s" not found`, module))
 		}
 	}
 	cname := C.CString(string(name))
 	defer C.free(unsafe.Pointer(cname))
 	instptr := C.EnvFindInstance(env.env, modptr, cname, 1)
 	if instptr == nil {
-		return nil, fmt.Errorf(`Instance "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Instance "%s" not found`, name))
 	}
 	return createInstance(env, instptr), nil
 }

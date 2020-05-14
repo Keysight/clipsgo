@@ -6,6 +6,9 @@ import (
 	"unicode"
 )
 
+// NotFoundError is returned when an item does not exist in CLIPS
+type NotFoundError error
+
 // Type is an enumeration CLIPS uses to describe data types
 type Type C.int
 

@@ -163,7 +163,7 @@ func (env *Environment) FindRule(name string) (*Rule, error) {
 	defer C.free(unsafe.Pointer(cname))
 	rptr := C.EnvFindDefrule(env.env, cname)
 	if rptr == nil {
-		return nil, fmt.Errorf(`Rule "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Rule "%s" not found`, name))
 	}
 	return createRule(env, rptr), nil
 }

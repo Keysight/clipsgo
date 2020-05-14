@@ -45,7 +45,7 @@ func (env *Environment) FindModule(name string) (*Module, error) {
 	defer C.free(unsafe.Pointer(cname))
 	modptr := C.EnvFindDefmodule(env.env, cname)
 	if modptr == nil {
-		return nil, fmt.Errorf(`Module "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Module "%s" not found`, name))
 	}
 	return createModule(env, modptr), nil
 }

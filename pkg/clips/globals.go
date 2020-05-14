@@ -44,7 +44,7 @@ func (env *Environment) FindGlobal(name string) (*Global, error) {
 	defer C.free(unsafe.Pointer(cname))
 	glbptr := C.EnvFindDefglobal(env.env, cname)
 	if glbptr == nil {
-		return nil, fmt.Errorf(`Global "%s" not found`, name)
+		return nil, NotFoundError(fmt.Errorf(`Global "%s" not found`, name))
 	}
 	return createGlobal(env, glbptr), nil
 }
