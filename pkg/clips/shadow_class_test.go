@@ -12,7 +12,7 @@ func TestInsertFields(t *testing.T) {
 		defer env.Delete()
 
 		type TestClass struct {
-			Intval   int
+			Intval   int `json:"name"`
 			Floatval float64
 			IntSlice []int
 			SymSlice []Symbol
@@ -24,7 +24,7 @@ func TestInsertFields(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, cls.String(), `(defclass MAIN::TestClass
    (is-a USER)
-   (slot Intval
+   (slot _name
       (type INTEGER))
    (slot Floatval
       (type FLOAT))
@@ -41,7 +41,7 @@ func TestInsertFields(t *testing.T) {
 
 		inst, err := cls.NewInstance("", false)
 		assert.NilError(t, err)
-		err = inst.SetSlot("Intval", 7)
+		err = inst.SetSlot("_name", 7)
 		assert.NilError(t, err)
 		err = inst.SetSlot("Floatval", 15.0)
 		assert.NilError(t, err)

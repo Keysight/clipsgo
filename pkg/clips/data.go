@@ -605,8 +605,12 @@ func slotNameFor(field reflect.StructField) string {
 	if tag, ok := field.Tag.Lookup("clips"); ok {
 		return tag
 	}
+	var ret = field.Name
 	if tag, ok := field.Tag.Lookup("json"); ok {
-		return strings.Split(tag, ",")[0]
+		ret = strings.Split(tag, ",")[0]
 	}
-	return field.Name
+	if ret == "name" {
+		ret = "_name"
+	}
+	return ret
 }
