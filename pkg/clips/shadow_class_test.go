@@ -70,9 +70,10 @@ func TestInsertFields(t *testing.T) {
 		defer env.Delete()
 
 		type Bar struct {
-			Intval   int
-			Floatval float64
-			IntSlice []int
+			Intval     int
+			Floatval   float64
+			IntSlice   []int
+			Undeclared struct{ Val string }
 		}
 		type TestClass struct {
 			Bar
@@ -91,6 +92,9 @@ func TestInsertFields(t *testing.T) {
       (type FLOAT))
    (multislot IntSlice
       (type INTEGER))
+   (slot Undeclared
+      (type INSTANCE-NAME)
+      (allowed-classes struct___Val_string__))
    (multislot SymSlice
       (type SYMBOL))
    (multislot GenSlice
@@ -98,13 +102,15 @@ func TestInsertFields(t *testing.T) {
 
 		slots := cls.Slots(true)
 		assert.Assert(t, slots != nil)
-		assert.Equal(t, len(slots), 5)
+		assert.Equal(t, len(slots), 6)
 
 		inst, err := cls.NewInstance("", false)
 		assert.NilError(t, err)
 		err = inst.SetSlot("Intval", 7)
 		assert.NilError(t, err)
 		err = inst.SetSlot("Floatval", 15.0)
+		assert.NilError(t, err)
+		err = inst.SetSlot("Undeclared", struct{ Val string }{Val: "val"})
 		assert.NilError(t, err)
 		err = inst.SetSlot("SymSlice", []Symbol{"a", "b", "c"})
 		assert.NilError(t, err)
@@ -116,8 +122,9 @@ func TestInsertFields(t *testing.T) {
 		assert.NilError(t, err)
 		assert.DeepEqual(t, out, TestClass{
 			Bar: Bar{
-				Intval:   7,
-				Floatval: 15.0,
+				Intval:     7,
+				Floatval:   15.0,
+				Undeclared: struct{ Val string }{Val: "val"},
 			},
 			SymSlice: []Symbol{
 				"a", "b", "c",

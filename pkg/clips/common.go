@@ -1,6 +1,10 @@
 package clips
 
 import "C"
+import (
+	"strings"
+	"unicode"
+)
 
 // Type is an enumeration CLIPS uses to describe data types
 type Type C.int
@@ -58,4 +62,20 @@ func (sm SaveMode) String() string {
 // CVal returns the value as appropriate for a C call
 func (sm SaveMode) CVal() C.int {
 	return C.int(sm)
+}
+
+func clipsSymbolEscape(in string) string {
+	//in = fmt.Sprintf("%+q", in)
+	return strings.Map(func(r rune) rune {
+		if !unicode.IsPrint(r) {
+			return '_'
+		}
+		if unicode.IsPunct(r) {
+			return '_'
+		}
+		if unicode.IsSpace(r) {
+			return '_'
+		}
+		return r
+	}, in)
 }
