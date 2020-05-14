@@ -413,7 +413,7 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 
 	if !data.IsValid() {
 		switch val.Kind() {
-		case reflect.Ptr, reflect.Interface:
+		case reflect.Ptr, reflect.Interface, reflect.Slice:
 			val.Set(reflect.Zero(val.Type()))
 			return nil
 		default:

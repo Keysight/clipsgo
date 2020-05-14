@@ -224,6 +224,7 @@ func TestInsertFields(t *testing.T) {
 		})
 
 		p2, err := env.MakeInstance(`(p2 of ParentClass (Str "with actual value") (Child [ch]))`)
+		assert.NilError(t, err)
 		ret = nil
 		err = p2.Extract(&ret)
 		assert.NilError(t, err)
@@ -232,6 +233,71 @@ func TestInsertFields(t *testing.T) {
 			Child: &ChildClass{
 				Intval:   99,
 				Floatval: 107.0,
+			},
+		})
+	})
+
+	t.Run("Nested insert - multi", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		type ChildClass struct {
+			Intval   int
+			Floatval float64
+		}
+		type ParentClass struct {
+			Str   string
+			Child []*ChildClass
+		}
+		var template *ParentClass
+
+		cls, err := env.InsertClass(template)
+		assert.NilError(t, err)
+		assert.Equal(t, cls.String(), `(defclass MAIN::ParentClass
+   (is-a USER)
+   (slot Str
+      (type STRING))
+   (multislot Child
+      (type INSTANCE-NAME)
+      (allowed-classes ChildClass)))`)
+
+		slots := cls.Slots(true)
+		assert.Assert(t, slots != nil)
+		assert.Equal(t, len(slots), 2)
+
+		_, err = env.MakeInstance(`(ch1 of ChildClass (Intval 99) (Floatval 107.0))`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(ch2 of ChildClass (Intval 99) (Floatval 107.0))`)
+		assert.NilError(t, err)
+
+		p1, err := env.MakeInstance(`(p1 of ParentClass (Str "with nil value"))`)
+		assert.NilError(t, err)
+
+		var ret *ParentClass
+		err = p1.Extract(&ret)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, &ParentClass{
+			Str:   "with nil value",
+			Child: nil,
+		})
+
+		p2, err := env.MakeInstance(`(p2 of ParentClass (Str "with actual value") (Child [ch1] [ch2]))`)
+		assert.NilError(t, err)
+		ret = nil
+		err = p2.Extract(&ret)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, &ParentClass{
+			Str: "with actual value",
+			Child: []*ChildClass{
+				&ChildClass{
+					Intval:   99,
+					Floatval: 107.0,
+				},
+				&ChildClass{
+					Intval:   99,
+					Floatval: 107.0,
+				},
 			},
 		})
 	})

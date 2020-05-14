@@ -67,12 +67,8 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 		fmt.Fprintf(defclass, "    (slot %s (type ?VARIABLE))\n", slotNameFor(field))
 		return nil
 	case reflect.Struct:
-		_, err := env.FindClass(fieldtype.Name())
-		if err != nil {
-			// need to recurse
-			if _, err := env.InsertClass(reflect.Zero(reflect.PtrTo(fieldtype)).Interface()); err != nil {
-				return err
-			}
+		if err := env.checkRecurseClass(fieldtype); err != nil {
+			return err
 		}
 		fmt.Fprintf(defclass, "    (slot %s (type INSTANCE-NAME) (allowed-classes %s))\n", slotNameFor(field), fieldtype.Name())
 		return nil
@@ -94,12 +90,26 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 	case reflect.Interface:
 		clipsSubtype = "?VARIABLE"
 	case reflect.Struct:
-		clipsSubtype = "?VARIABLE"
-		fmt.Fprintf(defclass, "    (multislot %s (type %s))\n", slotNameFor(field), clipsSubtype)
+		if err := env.checkRecurseClass(subtype); err != nil {
+			return err
+		}
+		fmt.Fprintf(defclass, "    (multislot %s (type INSTANCE-NAME) (allowed-classes %s))\n", slotNameFor(field), subtype.Name())
+		return nil
 	default:
 		clipsSubtype = clipsTypeFor(field.Type.Elem()).String()
 	}
 	fmt.Fprintf(defclass, "    (multislot %s (type %s))\n", slotNameFor(field), clipsSubtype)
+	return nil
+}
+
+func (env *Environment) checkRecurseClass(fieldtype reflect.Type) error {
+	_, err := env.FindClass(fieldtype.Name())
+	if err != nil {
+		// need to recurse
+		if _, err := env.InsertClass(reflect.Zero(reflect.PtrTo(fieldtype)).Interface()); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
