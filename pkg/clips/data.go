@@ -180,6 +180,8 @@ func clipsTypeFor(typ reflect.Type) Type {
 		return FLOAT
 	case reflect.Array, reflect.Slice:
 		return MULTIFIELD
+	case reflect.Struct:
+		return INSTANCE_NAME
 	default:
 		switch typ {
 		case reflect.TypeOf(""):
@@ -280,6 +282,9 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 		return v.instptr
 	}
 	val := reflect.ValueOf(dvalue)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
 	// We use Kind() in case of user subtypes, so they are mapped to their base type
 	switch val.Kind() {
 	case reflect.Bool:
@@ -307,6 +312,19 @@ func (do *DataObject) clipsValue(dvalue interface{}) unsafe.Pointer {
 	case reflect.String:
 		v := val.String()
 		vstr := C.CString(v)
+		defer C.free(unsafe.Pointer(vstr))
+		return C.EnvAddSymbol(do.env.env, vstr)
+	case reflect.Struct:
+		// need to insert the struct first, then store its INSTANCE-NAME
+		instname := "nil"
+		if dvalue != nil {
+			subinst, err := do.env.Insert("", dvalue)
+			if err != nil {
+				panic(err)
+			}
+			instname = string(subinst.Name())
+		}
+		vstr := C.CString(instname)
 		defer C.free(unsafe.Pointer(vstr))
 		return C.EnvAddSymbol(do.env.env, vstr)
 	}

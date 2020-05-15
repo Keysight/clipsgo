@@ -32,8 +32,8 @@ var clipsTypes = [...]string{
 	"MULTIFIELD",
 	"EXTERNAL_ADDRESS",
 	"FACT_ADDRESS",
-	"INSTANCE_ADDRESS",
-	"INSTANCE_NAME",
+	"INSTANCE-ADDRESS",
+	"INSTANCE-NAME",
 }
 
 func (typ Type) String() string {
