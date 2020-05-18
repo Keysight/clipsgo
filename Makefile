@@ -14,6 +14,7 @@ all: clips_source clips clipsgo
 
 clips_source:
 	wget -O clips.zip $(CLIPS_SOURCE_URL)
+	mkdir -p clips_source
 	unzip -jo clips.zip -d clips_source
 
 ifeq ($(PLATFORM),Darwin) # macOS
