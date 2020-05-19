@@ -29,7 +29,7 @@ clips: clips_source
 	$(MAKE) -f $(MAKEFILE_NAME) -C clips_source \
 		CFLAGS="-std=c99 -O3 -fno-strict-aliasing -fPIC" \
 		LDLIBS="-lm -lrt"
-	ld -lm -lrt -G clips_source/*.o -o clips_source/libclips.so
+	ld -G clips_source/*.o -o clips_source/libclips.so
 endif
 
 clipsgo: clips

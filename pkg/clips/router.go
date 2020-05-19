@@ -1,7 +1,7 @@
 package clips
 
 // #cgo CFLAGS: -I ../../clips_source
-// #cgo LDFLAGS: -L ../../clips_source -l clips
+// #cgo LDFLAGS: -L ../../clips_source -l clips -lm
 // #include <clips/clips.h>
 //
 // int queryFunction(void* env, const char* name);
