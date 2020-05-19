@@ -15,7 +15,7 @@ func TestInsertFields(t *testing.T) {
 			Intval   int `json:"name"`
 			Floatval float64
 			IntSlice []int
-			SymSlice []Symbol
+			SymSlice *[]Symbol
 			GenSlice []interface{}
 		}
 		var template *TestClass
@@ -56,7 +56,7 @@ func TestInsertFields(t *testing.T) {
 		assert.DeepEqual(t, out, TestClass{
 			Intval:   7,
 			Floatval: 15.0,
-			SymSlice: []Symbol{
+			SymSlice: &[]Symbol{
 				"a", "b", "c",
 			},
 			GenSlice: []interface{}{

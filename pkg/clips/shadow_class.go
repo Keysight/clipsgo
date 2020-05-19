@@ -121,7 +121,7 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 		fmt.Fprintf(defclass, "    (multislot %s (type INSTANCE-NAME) (allowed-classes %s))\n", slotNameFor(field), subtype.Name())
 		return nil
 	default:
-		clipsSubtype = clipsTypeFor(field.Type.Elem()).String()
+		clipsSubtype = clipsTypeFor(subtype).String()
 	}
 	fmt.Fprintf(defclass, "    (multislot %s (type %s))\n", slotNameFor(field), clipsSubtype)
 	return nil

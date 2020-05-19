@@ -18,19 +18,21 @@ clips_source:
 	unzip -jo /tmp/clips.zip -d clips_source
 
 ifeq ($(PLATFORM),Darwin) # macOS
-clips: clips_source
+clips_source/libclips.so: clips_source
 	$(MAKE) -f $(MAKEFILE_NAME) -C clips_source \
 		CFLAGS="-std=c99 -O3 -fno-strict-aliasing -fPIC" \
 		LDLIBS="-lm"
 	ld clips_source/*.o -lm -dylib -arch x86_64 \
 		-o clips_source/libclips.so
 else
-clips: clips_source
+clips_source/libclips.so: clips_source
 	$(MAKE) -f $(MAKEFILE_NAME) -C clips_source \
 		CFLAGS="-std=c99 -O3 -fno-strict-aliasing -fPIC" \
 		LDLIBS="-lm -lrt"
 	ld -G clips_source/*.o -o clips_source/libclips.so
 endif
+
+clips: clips_source/libclips.so
 
 clipsgo: clips
 	$(GO) build -o clipsgo ./cmd/clipsgo
