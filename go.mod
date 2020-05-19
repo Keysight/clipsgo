@@ -1,6 +1,6 @@
 module bitbucket.it.keysight.com/qsr/clipsgo.git
 
-go 1.12
+go 1.13
 
 require (
 	github.com/alecthomas/chroma v0.7.2
