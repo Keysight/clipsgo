@@ -20,6 +20,10 @@ func (env *Environment) InsertClass(basis interface{}) (*Class, error) {
 	if err != nil {
 		return nil, err
 	}
+	cls, err := env.FindClass(classname)
+	if err == nil {
+		return cls, fmt.Errorf("Class %s already exists", classname)
+	}
 	switch typ.Kind() {
 	case reflect.Struct, reflect.Interface:
 		// that's what we want
