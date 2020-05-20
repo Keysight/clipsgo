@@ -294,5 +294,7 @@ func (inst *Instance) ExtractSlot(retval interface{}, name string) error {
 // to a valid object, that object will be populated. If it is not, one will be created
 func (inst *Instance) Extract(retval interface{}) error {
 	slots := inst.Slots(true)
-	return inst.env.structuredExtract(retval, slots, true)
+	knownInstances := make(map[InstanceName]interface{})
+	knownInstances[inst.Name()] = retval
+	return inst.env.structuredExtract(retval, slots, true, knownInstances)
 }

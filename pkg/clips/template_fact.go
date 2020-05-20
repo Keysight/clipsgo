@@ -182,5 +182,6 @@ func (f *TemplateFact) Extract(retval interface{}) error {
 	if err != nil {
 		return err
 	}
-	return f.env.structuredExtract(retval, slots, false)
+	knownInstances := make(map[InstanceName]interface{})
+	return f.env.structuredExtract(retval, slots, false, knownInstances)
 }

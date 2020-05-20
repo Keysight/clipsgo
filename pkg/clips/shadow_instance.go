@@ -11,6 +11,11 @@ import (
 // Insert inserts the given object as a shadow instance in CLIPS. A shadow class
 // will be created if it does not already exist
 func (env *Environment) Insert(name string, basis interface{}) (*Instance, error) {
+	knownBases := make(map[reflect.Value]InstanceName)
+	return env.insertInstance(name, basis, knownBases)
+}
+
+func (env *Environment) insertInstance(name string, basis interface{}, knownBases map[reflect.Value]InstanceName) (*Instance, error) {
 	typ := reflect.TypeOf(basis)
 	val := reflect.ValueOf(basis)
 	if typ.Kind() == reflect.Ptr {
@@ -29,12 +34,12 @@ func (env *Environment) Insert(name string, basis interface{}) (*Instance, error
 	if err != nil {
 		return nil, err
 	}
-
+	knownBases[val] = inst.Name()
 	for ii := 0; ii < typ.NumField(); ii++ {
 		field := typ.Field(ii)
 		fieldval := val.Field(ii)
 
-		if err := inst.fillSlot(field, fieldval); err != nil {
+		if err := inst.fillSlot(field, fieldval, knownBases); err != nil {
 			return nil, err
 		}
 	}
@@ -47,12 +52,12 @@ func (env *Environment) Insert(name string, basis interface{}) (*Instance, error
 	return inst, nil
 }
 
-func (inst *Instance) fillSlot(field reflect.StructField, fieldval reflect.Value) error {
+func (inst *Instance) fillSlot(field reflect.StructField, fieldval reflect.Value, knownBases map[reflect.Value]InstanceName) error {
 	if field.Anonymous {
 		for ii := 0; ii < field.Type.NumField(); ii++ {
 			subfield := field.Type.Field(ii)
 			subval := fieldval.Field(ii)
-			if err := inst.fillSlot(subfield, subval); err != nil {
+			if err := inst.fillSlot(subfield, subval, knownBases); err != nil {
 				return err
 			}
 		}
@@ -72,8 +77,12 @@ func (inst *Instance) fillSlot(field reflect.StructField, fieldval reflect.Value
 	if fieldtype.Kind() != reflect.Struct {
 		return inst.SetSlot(slotNameFor(field), fielddata.Interface())
 	}
-	// need to recurse
-	subinst, err := inst.env.Insert("", fieldval.Interface())
+	// may need to recurse
+	subinstName, ok := knownBases[fielddata]
+	if ok {
+		return inst.SetSlot(slotNameFor(field), subinstName)
+	}
+	subinst, err := inst.env.insertInstance("", fieldval.Interface(), knownBases)
 	if err != nil {
 		return err
 	}

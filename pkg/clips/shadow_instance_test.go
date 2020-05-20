@@ -139,4 +139,26 @@ func TestInsert(t *testing.T) {
 		assert.NilError(t, err)
 		assert.DeepEqual(t, ret, &template2)
 	})
+
+	t.Run("Nested insert - recursion loop", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		template := ComposeParentClass{
+			Str: "with actual value",
+			Child: &ComposeChildClass{
+				Intval:   99,
+				Floatval: 107.0,
+			},
+		}
+		template.Child.Recurse = &template
+
+		var ret *ComposeParentClass
+		inst, err := env.Insert("", &template)
+		assert.NilError(t, err)
+		ret = nil
+		err = inst.Extract(&ret)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, &template)
+	})
 }

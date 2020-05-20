@@ -72,6 +72,7 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 	if typ.IsVariadic() {
 		fixedArgs--
 	}
+	knownInstances := make(map[InstanceName]interface{})
 	for index := 0; index < argnum; index++ {
 		// CLIPS is 1-based plus we prefixed args with function name
 		C.EnvRtnUnknown(envptr, C.int(index+2), temp.byRef())
@@ -85,7 +86,7 @@ func goFunction(envptr unsafe.Pointer, dataObject *C.struct_dataObject) {
 		}
 		paramVal := reflect.New(needType).Elem()
 		arg := temp.Value()
-		err := env.convertArg(paramVal, reflect.ValueOf(arg), true)
+		err := env.convertArg(paramVal, reflect.ValueOf(arg), true, knownInstances)
 		if err != nil {
 			printError(env, fmt.Sprintf("error calling function %s: %v", funcname, err.Error()))
 			return

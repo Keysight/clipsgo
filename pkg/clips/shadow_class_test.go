@@ -6,6 +6,16 @@ import (
 	"gotest.tools/assert"
 )
 
+type ComposeChildClass struct {
+	Intval   int
+	Floatval float64
+	Recurse  *ComposeParentClass
+}
+type ComposeParentClass struct {
+	Str   string
+	Child *ComposeChildClass
+}
+
 func TestInsertFields(t *testing.T) {
 	t.Run("Basic insert", func(t *testing.T) {
 		env := CreateEnvironment()
@@ -307,5 +317,89 @@ func TestInsertFields(t *testing.T) {
 				},
 			},
 		})
+	})
+
+	t.Run("Nested insert - recursive", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		var template *ComposeParentClass
+
+		cls, err := env.InsertClass(template)
+		assert.NilError(t, err)
+		assert.Equal(t, cls.String(), `(defclass MAIN::ComposeParentClass
+   (is-a USER)
+   (slot Str
+      (type STRING))
+   (slot Child
+      (type INSTANCE-NAME)
+      (allowed-classes ComposeChildClass)))`)
+
+		slots := cls.Slots(true)
+		assert.Assert(t, slots != nil)
+		assert.Equal(t, len(slots), 2)
+
+		_, err = env.MakeInstance(`(ch of ComposeChildClass (Intval 99) (Floatval 107.0))`)
+		assert.NilError(t, err)
+
+		p1, err := env.MakeInstance(`(p1 of ComposeParentClass (Str "with nil value"))`)
+		assert.NilError(t, err)
+
+		_, err = env.MakeInstance(`(ch2 of ComposeChildClass (Intval 99) (Floatval 107.0) (Recurse [p1]))`)
+		assert.NilError(t, err)
+
+		var ret *ComposeParentClass
+		err = p1.Extract(&ret)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, &ComposeParentClass{
+			Str:   "with nil value",
+			Child: nil,
+		})
+
+		p2, err := env.MakeInstance(`(p2 of ComposeParentClass (Str "with actual value") (Child [ch]))`)
+		assert.NilError(t, err)
+		ret = nil
+		err = p2.Extract(&ret)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, &ComposeParentClass{
+			Str: "with actual value",
+			Child: &ComposeChildClass{
+				Intval:   99,
+				Floatval: 107.0,
+			},
+		})
+
+		p3, err := env.MakeInstance(`(p3 of ComposeParentClass (Str "with actual value") (Child [ch2]))`)
+		assert.NilError(t, err)
+		ret = nil
+		err = p3.Extract(&ret)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, ret, &ComposeParentClass{
+			Str: "with actual value",
+			Child: &ComposeChildClass{
+				Intval:   99,
+				Floatval: 107.0,
+				Recurse: &ComposeParentClass{
+					Str:   "with nil value",
+					Child: nil,
+				},
+			},
+		})
+
+		// set up a truly infinite recursion, so we can ensure it's caught
+		_, err = env.Eval(`(send [ch2] put-Recurse [p3])`)
+		assert.NilError(t, err)
+		ret = nil
+		err = p3.Extract(&ret)
+		assert.NilError(t, err)
+		compare := ComposeParentClass{
+			Str: "with actual value",
+			Child: &ComposeChildClass{
+				Intval:   99,
+				Floatval: 107.0,
+			},
+		}
+		compare.Child.Recurse = &compare
+		assert.DeepEqual(t, ret, &compare)
 	})
 }

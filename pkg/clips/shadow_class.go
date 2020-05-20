@@ -51,6 +51,13 @@ func classNameFor(typ reflect.Type) (string, error) {
 }
 
 func (env *Environment) insertShadowClass(classname string, typ reflect.Type) error {
+	// first, build effectively a forward declaration, so we don't get into
+	// infinite recursion if some field references this class. That lookup
+	// will succeed.
+	if err := env.Build(fmt.Sprintf(`(defclass %s (is-a USER))`, classname)); err != nil {
+		return err
+	}
+	// Now, we'll override with a full definition
 	var defclass strings.Builder
 	fmt.Fprintf(&defclass, "(defclass %s (is-a USER)\n", classname)
 	for ii := 0; ii < typ.NumField(); ii++ {

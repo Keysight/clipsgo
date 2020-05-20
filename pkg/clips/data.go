@@ -368,7 +368,8 @@ func (do *DataObject) ExtractValue(retval interface{}, extractClasses bool) erro
 		return fmt.Errorf("retval must be a pointer to the value to be filled in")
 	}
 	val := do.Value()
-	return do.env.convertArg(reflect.ValueOf(retval), reflect.ValueOf(val), extractClasses)
+	knownInstances := make(map[InstanceName]interface{})
+	return do.env.convertArg(reflect.ValueOf(retval), reflect.ValueOf(val), extractClasses, knownInstances)
 }
 
 // MustExtractValue attempts to put the represented data value into the item provided by the user, and panics if it can't
@@ -396,7 +397,7 @@ func safeIndirect(output reflect.Value) reflect.Value {
 	return val
 }
 
-func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool) error {
+func (env *Environment) convertArg(output reflect.Value, data reflect.Value, extractClasses bool, knownInstances map[InstanceName]interface{}) error {
 	val := safeIndirect(output)
 
 	if extractClasses && data.IsValid() {
@@ -422,8 +423,16 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 				if subinst == nil {
 					data = reflect.ValueOf(nil)
 				} else {
-					// extract the instance
-					return subinst.Extract(val.Addr().Interface())
+					if knownVal, ok := knownInstances[subinst.Name()]; ok {
+						// This implies a circular recursive reference
+						val.Set(reflect.ValueOf(knownVal).Elem())
+						return nil
+					} else {
+						// extract the instance
+						slots := subinst.Slots(true)
+						knownInstances[subinst.Name()] = val.Addr().Interface()
+						return subinst.env.structuredExtract(val.Addr().Interface(), slots, true, knownInstances)
+					}
 				}
 			}
 		}
@@ -521,7 +530,7 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 		for i := 0; i < data.Len(); i++ {
 			// what we get from CLIPS is always []interface{}, so there's no check for that here
 			indexval := data.Index(i).Elem()
-			if err := env.convertArg(sliceval.Index(i), indexval, extractClasses); err != nil {
+			if err := env.convertArg(sliceval.Index(i), indexval, extractClasses, knownInstances); err != nil {
 				return err
 			}
 		}
@@ -546,7 +555,7 @@ func (env *Environment) convertArg(output reflect.Value, data reflect.Value, ext
 	return fmt.Errorf(`Invalid type "%v", expected "%v"`, data.Type(), val.Type())
 }
 
-func (env *Environment) structuredExtract(retval interface{}, slots map[string]interface{}, extractClasses bool) error {
+func (env *Environment) structuredExtract(retval interface{}, slots map[string]interface{}, extractClasses bool, knownInstances map[InstanceName]interface{}) error {
 	ptr := reflect.ValueOf(retval)
 	if ptr.Kind() != reflect.Ptr {
 		return fmt.Errorf("Unable to store data to non-pointer type")
@@ -579,7 +588,7 @@ func (env *Environment) structuredExtract(retval interface{}, slots map[string]i
 		}
 		for k, v := range slots {
 			newval := reflect.Indirect(reflect.New(typ.Elem()))
-			if err := env.convertArg(newval, reflect.ValueOf(v), extractClasses); err != nil {
+			if err := env.convertArg(newval, reflect.ValueOf(v), extractClasses, knownInstances); err != nil {
 				return err
 			}
 			val.SetMapIndex(reflect.ValueOf(k), newval)
@@ -589,7 +598,7 @@ func (env *Environment) structuredExtract(retval interface{}, slots map[string]i
 			field := typ.Field(ii)
 			fieldval := val.Field(ii)
 
-			if err := env.fillStruct(fieldval, field, slots, extractClasses); err != nil {
+			if err := env.fillStruct(fieldval, field, slots, extractClasses, knownInstances); err != nil {
 				return err
 			}
 		}
@@ -600,12 +609,12 @@ func (env *Environment) structuredExtract(retval interface{}, slots map[string]i
 	return nil
 }
 
-func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructField, slots map[string]interface{}, extractClasses bool) error {
+func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructField, slots map[string]interface{}, extractClasses bool, knownInstances map[InstanceName]interface{}) error {
 	if field.Anonymous {
 		embedType := fieldval.Type()
 		// treat fields of the anonymous class just like they are native
 		for ii := 0; ii < fieldval.NumField(); ii++ {
-			if err := env.fillStruct(fieldval.Field(ii), embedType.Field(ii), slots, extractClasses); err != nil {
+			if err := env.fillStruct(fieldval.Field(ii), embedType.Field(ii), slots, extractClasses, knownInstances); err != nil {
 				return err
 			}
 		}
@@ -615,7 +624,7 @@ func (env *Environment) fillStruct(fieldval reflect.Value, field reflect.StructF
 	if !ok {
 		return nil
 	}
-	return env.convertArg(fieldval.Addr(), reflect.ValueOf(fielddata), extractClasses)
+	return env.convertArg(fieldval.Addr(), reflect.ValueOf(fielddata), extractClasses, knownInstances)
 }
 
 // decide the CLIPS slot name based on tag
