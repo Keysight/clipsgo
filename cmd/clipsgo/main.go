@@ -16,7 +16,7 @@ package main
 */
 
 import (
-	"github.com/keysight/clipsgo.git/pkg/clips"
+	"github.com/keysight/clipsgo/pkg/clips"
 )
 
 func main() {

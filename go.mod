@@ -1,4 +1,4 @@
-module github.com/keysight/clipsgo.git
+module github.com/keysight/clipsgo
 
 go 1.14
 
