@@ -1,4 +1,4 @@
-module bitbucket.it.keysight.com/qsr/clipsgo.git
+module github.com/keysight/clipsgo.git
 
 go 1.14
 
