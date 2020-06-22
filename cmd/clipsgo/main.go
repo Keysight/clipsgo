@@ -16,7 +16,7 @@ package main
 */
 
 import (
-	"bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+	"github.com/keysight/clipsgo.git/pkg/clips"
 )
 
 func main() {
