@@ -64,7 +64,7 @@ Instances are instantiations of specific classes. They store values by name, sim
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -222,7 +222,7 @@ Ordered Facts represent information as a list of elements. There is no explicit 
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -253,7 +253,7 @@ would likely lead to errors.)
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -275,7 +275,7 @@ Unordered facts represent data similar to Go maps. They require a template to be
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -323,7 +323,7 @@ It is possible to evaluate CLIPS statements, retrieving their results in Go.
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -336,7 +336,7 @@ _Note that this functionality relies on CLIPS `eval` function, which does not ac
 
 The return from Eval is interface{}, since it is not possible to know in advance what kind of data will be returned.
 
-For cases where the user is able to know an expected return type, an ExtractEval function is provided. This will marshal the returned data into an object provided by the user. Using ExtractEval can reduce the amount of boilerplate type checking required. Type conversions are applied as necessary. An error will be generated if a numeric type conversion results in loss of precision.
+For cases where the user is able to know an expected return type, an ExtractEval function is provided. This will marshall the returned data into an object provided by the user. Using ExtractEval can reduce the amount of boilerplate type checking required. Type conversions are applied as necessary. An error will be generated if a numeric type conversion results in loss of precision.
 
 ```go
 intval := 4
@@ -368,7 +368,7 @@ In order to overcome some of the limitations of the CLIPS `eval` command, clipsg
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -387,7 +387,7 @@ CLIPS constructs must be defined in CLIPS language. Use the `Load()` or `Build()
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -416,7 +416,7 @@ Variadic functions are also supported.
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
@@ -441,7 +441,7 @@ All of the Go objects created to interact with the CLIPS environment are simple 
 
 ```go
 import (
-    "bitbucket.it.keysight.com/qsr/clipsgo.git/pkg/clips"
+    "github.com/keysight/clipsgo/pkg/clips"
 )
 
 env := clips.CreateEnvironment()
