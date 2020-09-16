@@ -1,4 +1,5 @@
 package clips
+
 /*
    Copyright 2020 Keysight Technologies
 
@@ -114,6 +115,8 @@ var builtins = []string{
 	"asech",
 	"asin",
 	"assert",
+	"batch",
+	"batch*",
 	"cot",
 	"coth",
 	"create$",
@@ -201,6 +204,7 @@ var builtins = []string{
 	"loop-for-count",
 	"lowcase",
 	"make-instance",
+	"matches",
 	"ppdefclass",
 	"ppdeffacts",
 	"ppdeffunction",
