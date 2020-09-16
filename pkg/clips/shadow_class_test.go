@@ -1,4 +1,5 @@
 package clips
+
 /*
    Copyright 2020 Keysight Technologies
 
@@ -267,6 +268,34 @@ func TestInsertFields(t *testing.T) {
 				Floatval: 107.0,
 			},
 		})
+	})
+
+	t.Run("Nested insert - pointer w/ nulls allowed", func(t *testing.T) {
+		env := CreateEnvironment()
+		defer env.Delete()
+
+		type ChildClass struct {
+			Intval   int
+			Floatval float64
+		}
+		type ParentClass struct {
+			Str   string
+			Child *ChildClass
+		}
+		var template *ParentClass
+
+		cls, err := env.InsertClass(template, DoNotRestrictAllowedClasses)
+		assert.NilError(t, err)
+		assert.Equal(t, cls.String(), `(defclass MAIN::ParentClass
+   (is-a USER)
+   (slot Str
+      (type STRING))
+   (slot Child
+      (type INSTANCE-NAME)))`)
+
+		slots := cls.Slots(true)
+		assert.Assert(t, slots != nil)
+		assert.Equal(t, len(slots), 2)
 	})
 
 	t.Run("Nested insert - multi", func(t *testing.T) {

@@ -4,6 +4,7 @@ package clips
 // #cgo LDFLAGS: -L ../../clips_source -l clips -lm
 // #include <clips/clips.h>
 import "C"
+
 /*
    Copyright 2020 Keysight Technologies
 
@@ -23,12 +24,12 @@ import (
 
 // Insert inserts the given object as a shadow instance in CLIPS. A shadow class
 // will be created if it does not already exist
-func (env *Environment) Insert(name string, basis interface{}) (*Instance, error) {
+func (env *Environment) Insert(name string, basis interface{}, opts ...InsertClassOption) (*Instance, error) {
 	knownBases := make(map[reflect.Value]InstanceName)
 	return env.insertInstance(name, basis, knownBases)
 }
 
-func (env *Environment) insertInstance(name string, basis interface{}, knownBases map[reflect.Value]InstanceName) (*Instance, error) {
+func (env *Environment) insertInstance(name string, basis interface{}, knownBases map[reflect.Value]InstanceName, opts ...InsertClassOption) (*Instance, error) {
 	typ := reflect.TypeOf(basis)
 	val := reflect.ValueOf(basis)
 	if typ.Kind() == reflect.Ptr {
@@ -81,7 +82,7 @@ func (inst *Instance) fillSlot(field reflect.StructField, fieldval reflect.Value
 	fielddata := fieldval
 	if fieldtype.Kind() == reflect.Ptr {
 		if fieldval.IsNil() {
-			return inst.SetSlot(slotNameFor(field), Symbol("nil"))
+			return inst.SetSlot(slotNameFor(field), InstanceName("nil"))
 		}
 		fieldtype = fieldtype.Elem()
 		fielddata = fielddata.Elem()

@@ -4,6 +4,7 @@ package clips
 // #cgo LDFLAGS: -L ../../clips_source -l clips -lm
 // #include <clips/clips.h>
 import "C"
+
 /*
    Copyright 2020 Keysight Technologies
 

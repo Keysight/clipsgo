@@ -1,4 +1,5 @@
 package clips
+
 /*
    Copyright 2020 Keysight Technologies
 
@@ -23,8 +24,16 @@ import (
 	"strings"
 )
 
+// InsertClassOption tweaks how the inserted class is instructed
+type InsertClassOption string
+
+const (
+	// DoNotRestrictAllowedClasses prevents the class insertion from using an allowed-class constraint for instance-name slots. Primarily useful if [nil] must be allowed
+	DoNotRestrictAllowedClasses InsertClassOption = "DoNotRestrictAllowedClasses"
+)
+
 // InsertClass creates a representation of a Go struct as a CLIPS defclass
-func (env *Environment) InsertClass(basis interface{}) (*Class, error) {
+func (env *Environment) InsertClass(basis interface{}, opts ...InsertClassOption) (*Class, error) {
 	typ := reflect.TypeOf(basis)
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
@@ -43,7 +52,7 @@ func (env *Environment) InsertClass(basis interface{}) (*Class, error) {
 	default:
 		return nil, fmt.Errorf(`Unable to insert defclass for type "%s"`, typ.String())
 	}
-	if err := env.insertShadowClass(classname, typ); err != nil {
+	if err := env.insertShadowClass(classname, typ, opts...); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +76,7 @@ func classNameFor(typ reflect.Type) (string, error) {
 	return classname, nil
 }
 
-func (env *Environment) insertShadowClass(classname string, typ reflect.Type) error {
+func (env *Environment) insertShadowClass(classname string, typ reflect.Type, opts ...InsertClassOption) error {
 	// first, build effectively a forward declaration, so we don't get into
 	// infinite recursion if some field references this class. That lookup
 	// will succeed.
@@ -80,7 +89,7 @@ func (env *Environment) insertShadowClass(classname string, typ reflect.Type) er
 	for ii := 0; ii < typ.NumField(); ii++ {
 		field := typ.Field(ii)
 
-		if err := env.defclassSlots(&defclass, field); err != nil {
+		if err := env.defclassSlots(&defclass, field, opts...); err != nil {
 			return err
 		}
 	}
@@ -89,7 +98,7 @@ func (env *Environment) insertShadowClass(classname string, typ reflect.Type) er
 	return env.Build(buildcmd)
 }
 
-func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.StructField) error {
+func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.StructField, opts ...InsertClassOption) error {
 	if field.Anonymous {
 		// treat fields of the anonymous class just like they are native
 		for ii := 0; ii < field.Type.NumField(); ii++ {
@@ -115,7 +124,14 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 		if _, err = env.checkRecurseClass(classname, fieldtype); err != nil {
 			return err
 		}
-		fmt.Fprintf(defclass, "    (slot %s (type INSTANCE-NAME) (allowed-classes %s))\n", slotNameFor(field), classname)
+		allowed := fmt.Sprintf(" (allowed-classes %s)", classname)
+		for _, v := range opts {
+			switch v {
+			case DoNotRestrictAllowedClasses:
+				allowed = ""
+			}
+		}
+		fmt.Fprintf(defclass, "    (slot %s (type INSTANCE-NAME)%s)\n", slotNameFor(field), allowed)
 		return nil
 	case reflect.Array, reflect.Slice:
 		// don't handle here
@@ -151,14 +167,14 @@ func (env *Environment) defclassSlots(defclass *strings.Builder, field reflect.S
 	return nil
 }
 
-func (env *Environment) checkRecurseClass(classname string, fieldtype reflect.Type) (*Class, error) {
+func (env *Environment) checkRecurseClass(classname string, fieldtype reflect.Type, opts ...InsertClassOption) (*Class, error) {
 	cls, err := env.FindClass(classname)
 	if err != nil {
 		if _, ok := err.(NotFoundError); !ok {
 			return nil, err
 		}
 		// need to recurse
-		if cls, err = env.InsertClass(reflect.Zero(reflect.PtrTo(fieldtype)).Interface()); err != nil {
+		if cls, err = env.InsertClass(reflect.Zero(reflect.PtrTo(fieldtype)).Interface(), opts...); err != nil {
 			return nil, err
 		}
 	}
